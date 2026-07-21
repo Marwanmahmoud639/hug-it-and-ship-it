@@ -21,9 +21,9 @@ import { AccessTracker } from "@/components/landing/AccessTracker";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "the Engine — List vendors sell you the list. We book you the meeting." },
+      { title: "The engine — List vendors sell you the list. We book you the meeting." },
       { name: "description", content: "The 5-channel outbound engine for agencies. Email, SMS, DM, cold call, ringless voicemail — straight to the decision maker's mobile. Replaces six tools with one." },
-      { property: "og:title", content: "the Engine — List vendors sell you the list. We book you the meeting." },
+      { property: "og:title", content: "The engine — List vendors sell you the list. We book you the meeting." },
       { property: "og:description", content: "Surround every decision maker on 5 channels until they answer. Built for agencies." },
     ],
   }),
@@ -106,7 +106,7 @@ function Hero() {
           <Reveal delay={0.1}>
             <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-10 leading-relaxed">
               Every other agency is buying the same 200M contacts and emailing them once.
-              the Engine runs a 5-channel surround sequence — email, SMS, DM, cold call, ringless voicemail —
+              the engine runs a 5-channel surround sequence — email, SMS, DM, cold call, ringless voicemail —
               straight to the decision-maker's mobile. They reply, or they block you on five things at once.
               Either way, you stop getting ignored.
             </p>
@@ -337,7 +337,7 @@ function Engine() {
       icon: Workflow,
       eyebrow: "5-Channel Orchestration",
       title: "One workflow runs everything.",
-      body: "Drag the prospect into the sequence — the Engine handles the rest. When to email, when to text, when the dialer fires, when the RVM drops, when the DM goes out. Stop-on-reply across all channels. Time-zone aware. Compliance gates on every send.",
+      body: "Drag the prospect into the sequence — the engine handles the rest. When to email, when to text, when the dialer fires, when the RVM drops, when the DM goes out. Stop-on-reply across all channels. Time-zone aware. Compliance gates on every send.",
       bullets: [
         "Visual sequence builder, no code",
         "Spintax + AI personalization per prospect",
@@ -466,7 +466,7 @@ function VsStack() {
           <div className="text-center mb-12 max-w-3xl mx-auto">
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-3">vs. your current stack</div>
             <h2 className="font-black text-[32px] md:text-[48px] text-white tracking-tight leading-[1.05]">
-              List vendors give you the list. the Engine <span className="r4d-lime">closes</span> the loop.
+              List vendors give you the list. The engine <span className="r4d-lime">closes</span> the loop.
             </h2>
           </div>
         </Reveal>
@@ -491,11 +491,11 @@ function Results() {
   // {/* TODO: replace with real testimonials before going live */}
   const cases = [
     {
-      quote: "One 6-person B2B agency went from 4 booked calls/mo on their old list tool to 31 in their first 6 weeks on the Engine.",
+      quote: "One 6-person B2B agency went from 4 booked calls/mo on their old list tool to 31 in their first 6 weeks on the engine.",
       who: "Founder, One 6-person B2B agency Agency",
     },
     {
-      quote: "We killed five subscriptions and a VA seat. the Engine replaced the whole thing and our reply rate doubled.",
+      quote: "We killed five subscriptions and a VA seat. The engine replaced the whole thing and our reply rate doubled.",
       who: "Ops Lead, Outbound Republic",
     },
     {
@@ -621,7 +621,7 @@ function Founder() {
           <div className="text-center mb-10">
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-3">Founder's note</div>
             <h2 className="font-black text-[32px] md:text-[48px] text-white tracking-tight leading-[1.05]">
-              Why we built <span className="r4d-lime">the Engine</span>.
+              Why we built <span className="r4d-lime">the engine</span>.
             </h2>
           </div>
         </Reveal>
@@ -630,7 +630,7 @@ function Founder() {
           <div className="relative rounded-2xl border border-white/10 bg-black p-8 md:p-10">
             <div className="absolute top-4 bottom-4 left-0 w-1 r4d-bg-lime rounded-r" />
             <p className="text-zinc-200 leading-relaxed text-lg pl-4">
-              "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. the Engine is that engine."
+              "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. The engine is that engine."
             </p>
             <div className="pl-4 mt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full r4d-bg-lime flex items-center justify-center text-black font-black">M</div>
@@ -844,16 +844,16 @@ function HowAccess() {
 
 function FAQ() {
   const items = [
-    { q: "Is this just another list-vendor wrapper?", a: "No. the Engine pulls from a 5-provider waterfall for mobile and personal email — one may be a source we use, but the engine is the orchestration across email, SMS, DM, cold call, and RVM, not a list resale." },
+    { q: "Is this just another list-vendor wrapper?", a: "No. The engine pulls from a 5-provider waterfall for mobile and personal email — one may be a source we use, but the engine is the orchestration across email, SMS, DM, cold call, and RVM, not a list resale." },
     { q: "Do I need my own phone numbers and sending domains?", a: "On Starter we provision your dialer numbers and sending domains. Pro and Enterprise can BYO if you already have warmed assets." },
-    { q: "How is this different from a cold-calling agency?", a: "Cold-calling agencies dial gatekeepers all day. the Engine dials decision-makers on their mobile after they've already seen your email, text, and DM — so the conversation actually starts." },
+    { q: "How is this different from a cold-calling agency?", a: "Cold-calling agencies dial gatekeepers all day. The engine dials decision-makers on their mobile after they've already seen your email, text, and DM — so the conversation actually starts." },
     { q: "What about TCPA / DNC compliance?", a: "Every contact is federal + state DNC scrubbed before any send, and compliance gates block non-compliant sends from leaving your workspace." },
     { q: "Can my team use it for multiple clients?", a: "Yes — Pro supports a team inbox; Enterprise adds full sub-accounts with white-label subdomain, per-client inboxes, dialers, and reporting." },
     { q: "How long does setup take?", a: "Most agencies are live within a day of approval. Domain warm-up runs in the background; you can start the sequence on day one." },
     { q: "What happens after I pay?", a: "Checkout redirects you to /signup. Enter the email you paid with, we manually approve you (no bots), email you a one-time 6-digit code, and you activate the account." },
     { q: "Is there a contract?", a: "No annual lock-in by default. Cancel anytime." },
     { q: "How fast until I see meetings?", a: "Most agencies book their first qualified meeting inside 14 days of activation, often sooner once domains are warm and the sequence is live." },
-    { q: "Do you provide the data or do I bring it?", a: "Both. the Engine discovers decision-makers for you with a 5-provider waterfall, and you can import your own lists too." },
+    { q: "Do you provide the data or do I bring it?", a: "Both. The engine discovers decision-makers for you with a 5-provider waterfall, and you can import your own lists too." },
     { q: "Is the AI dialer compliant?", a: "Every dial, SMS, and RVM passes federal + state DNC scrubbing first, and compliance gates block non-compliant sends from leaving your workspace." },
     { q: "What happens if I cancel?", a: "Cancel anytime — no ticket. Your account stays active through the end of the billing period." },
     { q: "Can I white-label it for my clients?", a: "Yes, on Enterprise: custom subdomain, per-client inboxes, dialer numbers, and reporting." },
@@ -956,7 +956,7 @@ function Footer() {
               <div className="w-8 h-8 rounded-lg r4d-bg-lime flex items-center justify-center">
                 <Target className="w-4 h-4 text-black" strokeWidth={2.5} />
               </div>
-              <span className="font-black text-lg text-white">the Engine</span>
+              <span className="font-black text-lg text-white">the engine</span>
             </Link>
             <p className="text-sm text-zinc-500 max-w-xs">
               The 5-channel outbound engine for agencies.
@@ -973,7 +973,7 @@ function Footer() {
           </div>
         </div>
         <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600">
-          <span>© 2026 the Engine. All rights reserved.</span>
+          <span>© 2026 the engine. All rights reserved.</span>
           <span className="flex items-center gap-1.5"><Sparkles className="w-3 h-3 r4d-lime" /> Built for operators.</span>
         </div>
       </div>

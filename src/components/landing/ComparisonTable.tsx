@@ -22,7 +22,7 @@ export function ComparisonTable() {
             <div className="p-4 text-zinc-400 bg-[#0A0A0A]">Capability</div>
             <div className="p-4 text-center text-zinc-400 bg-[#0A0A0A]">List resellers</div>
             <div className="p-4 text-center text-zinc-400 bg-[#0A0A0A]">Cold-call agencies</div>
-            <div className="p-4 text-center text-black r4d-bg-lime border-x-2 border-[#C6F432]">the Engine</div>
+            <div className="p-4 text-center text-black r4d-bg-lime border-x-2 border-[#C6F432]">the engine</div>
           </div>
           {ROWS.map((row, i) => (
             <div
@@ -53,7 +53,7 @@ export function ComparisonTable() {
           <span className="text-zinc-500"> and six logins.</span>
         </p>
         <p className="mt-3 r4d-lime font-bold text-base">
-          the Engine starts at $149/mo and one login.
+          the engine starts at $149/mo and one login.
         </p>
       </div>
     </div>
