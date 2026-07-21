@@ -464,7 +464,7 @@ function ObjectionsTab({ agent }: { agent: Agent }) {
       <Card className="p-4 space-y-3">
         <div className="font-semibold">Add a rebuttal</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><Label>Objection</Label><Input value={obj} onChange={(e) => setObj(e.target.value)} placeholder='e.g. "I\'m not interested"' /></div>
+          <div><Label>Objection</Label><Input value={obj} onChange={(e) => setObj(e.target.value)} placeholder={`e.g. "I'm not interested"`} /></div>
           <div><Label>Rebuttal</Label><Input value={reb} onChange={(e) => setReb(e.target.value)} placeholder="Short one-line response…" /></div>
         </div>
         <div><Button onClick={add}><Plus className="w-4 h-4 mr-1" /> Add</Button></div>
