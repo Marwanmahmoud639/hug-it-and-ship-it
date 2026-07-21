@@ -48,6 +48,38 @@ const VOICES: Array<{ id: string; name: string; provider: "web_speech" | "eleven
   { id: "verse",          name: "Verse (Premium)",    provider: "openai",     description: "Premium neural voice." },
 ];
 
+// Preview a voice in the browser using the Web Speech API. Works for the
+// `web_speech` presets; for premium slots we still play a sample so users
+// can hear the accent/gender they picked before wiring up a paid provider.
+function previewVoice(voiceId: string, sample?: string) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    toast.error("Voice preview isn't supported in this browser.");
+    return;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    const text = (sample && sample.trim()) ||
+      "Hi, this is a quick preview of how I'll sound on your calls.";
+    const u = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const wantsFemale = voiceId.includes("female");
+    const wantsMale = voiceId.includes("male");
+    const uk = voiceId.includes("uk");
+    const au = voiceId.includes("au");
+    u.lang = uk ? "en-GB" : au ? "en-AU" : "en-US";
+    const match = voices.find(v =>
+      (uk ? v.lang.startsWith("en-GB") : au ? v.lang.startsWith("en-AU") : v.lang.startsWith("en"))
+      && (wantsFemale ? /female|samantha|victoria|karen|zira|ava|allison/i.test(v.name)
+        : wantsMale ? /male|david|daniel|alex|fred/i.test(v.name) : true)
+    ) ?? voices.find(v => v.lang.startsWith("en"));
+    if (match) u.voice = match;
+    u.rate = 1.0;
+    window.speechSynthesis.speak(u);
+  } catch {
+    toast.error("Couldn't play voice preview.");
+  }
+}
+
 type Agent = {
   id: string; name: string; description: string | null;
   voice_id: string; voice_provider: string; language: string;
@@ -150,10 +182,15 @@ function CreateAgentDialog({ open, onOpenChange, onCreated }: { open: boolean; o
           <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cash Offer Caller" /></div>
           <div>
             <Label>Voice</Label>
-            <Select value={voice.id} onValueChange={(v) => setVoice(VOICES.find(x => x.id === v) ?? VOICES[0])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={voice.id} onValueChange={(v) => setVoice(VOICES.find(x => x.id === v) ?? VOICES[0])}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button type="button" variant="outline" size="icon" onClick={() => previewVoice(voice.id, script)} title="Play preview">
+                <Volume2 className="w-4 h-4" />
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground mt-1">{voice.description}</p>
           </div>
           <div><Label>Opening script</Label><Textarea rows={3} value={script} onChange={(e) => setScript(e.target.value)} /></div>
@@ -224,10 +261,15 @@ function AgentTab({ agent, onRefresh }: { agent: Agent; onRefresh: () => void })
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div>
           <Label>Voice</Label>
-          <Select value={voiceId} onValueChange={setVoiceId}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={voiceId} onValueChange={setVoiceId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button type="button" variant="outline" size="icon" onClick={() => previewVoice(voiceId, script)} title="Play preview">
+              <Volume2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <div>
           <Label>Status</Label>
@@ -255,6 +297,7 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
   const listFn = useServerFn(listKnowledge);
   const addFn = useServerFn(addKnowledgeText);
   const removeFn = useServerFn(removeKnowledge);
+  const updateFn = useServerFn(updateAgent);
   const qc = useQueryClient();
   const { data: items = [] } = useQuery({
     queryKey: ["agent-knowledge", agent.id],
@@ -263,7 +306,21 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
+  const [script, setScript] = useState(agent.script);
+  const [prompt, setPrompt] = useState(agent.system_prompt);
+  const [savingCore, setSavingCore] = useState(false);
+  useEffect(() => { setScript(agent.script); setPrompt(agent.system_prompt); }, [agent.id]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const saveCore = async () => {
+    setSavingCore(true);
+    try {
+      await updateFn({ data: { id: agent.id, patch: { script, system_prompt: prompt } } });
+      toast.success("Script & prompt saved");
+      qc.invalidateQueries({ queryKey: ["voice-agents"] });
+    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    finally { setSavingCore(false); }
+  };
 
   const submitText = async () => {
     if (!title.trim() || !content.trim()) { toast.error("Title and content required"); return; }
@@ -287,7 +344,30 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold flex items-center gap-2"><Bot className="w-4 h-4 text-primary" /> System prompt & calling script</div>
+          <Button size="sm" variant="outline" onClick={() => previewVoice(agent.voice_id, script)} title="Play script preview">
+            <Volume2 className="w-4 h-4 mr-1" /> Preview voice
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">These sit at the top of every call. The knowledge library below is loaded in as reference material the AI can quote from.</p>
+        <div>
+          <Label>System prompt (how it should behave)</Label>
+          <Textarea rows={5} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+        </div>
+        <div>
+          <Label>Calling script (opening + flow)</Label>
+          <Textarea rows={5} value={script} onChange={(e) => setScript(e.target.value)} />
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={saveCore} disabled={savingCore}>
+            {savingCore && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Save script & prompt
+          </Button>
+        </div>
+      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <Card className="p-4 space-y-3">
         <div className="font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Teach your AI</div>
         <p className="text-sm text-muted-foreground">Paste a script, FAQ, pricing sheet — or upload a text/PDF file. The AI reads all of this before every call.</p>
@@ -318,6 +398,7 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
           </div>
         )}
       </Card>
+      </div>
     </div>
   );
 }
