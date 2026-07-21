@@ -30,7 +30,7 @@ function AgencyPage() {
   const [whiteLabelName, setWhiteLabelName] = useState("");
   const [monthlyRecords, setMonthlyRecords] = useState<number>(1000);
   const [seats, setSeats] = useState<number>(1);
-  const [niche, setNiche] = useState<string>("");
+  const [niches, setNiches] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   const planDefaults: Record<string, { records: number; seats: number }> = {
