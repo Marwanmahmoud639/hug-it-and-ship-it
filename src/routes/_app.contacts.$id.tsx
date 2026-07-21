@@ -15,6 +15,7 @@ import { ContactTasks } from "@/components/contacts/contact-tasks";
 import { useCalling } from "@/components/calling/calling-provider";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyDecisionMaker } from "@/lib/verify-dm.functions";
+import { listAgents, startCall as startAiCall } from "@/lib/voice-agent.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/contacts/$id")({ component: ContactDetail });
@@ -153,7 +154,10 @@ function ContactDetail() {
           </Card>
 
           <Card className="p-4">
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Phone className="w-4 h-4" /> Phones</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Phone className="w-4 h-4" /> Phones</h3>
+              {phones.length > 0 && <AiCallerButton phoneNumber={phones[0].phone_number} contactId={id} />}
+            </div>
             {phones.length === 0 ? <p className="text-sm text-muted-foreground">None</p> :
               phones.map((p) => (
                 <div key={p.id} className="text-sm py-1 border-b border-border last:border-0">
@@ -292,5 +296,27 @@ function SocialProfilesCard({
         </div>
       )}
     </Card>
+  );
+}
+
+function AiCallerButton({ phoneNumber, contactId }: { phoneNumber: string; contactId: string }) {
+  const listAgentsFn = useServerFn(listAgents);
+  const startAi = useServerFn(startAiCall);
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true);
+    try {
+      const agents = (await listAgentsFn()) as any[];
+      const active = agents.find((a: any) => a.status === "active") ?? agents[0];
+      if (!active) { toast.error("Create an AI caller first in AI Caller → New agent"); return; }
+      await startAi({ data: { agent_id: active.id, contact_id: contactId, phone_number: phoneNumber } });
+      toast.success(`${active.name} queued this contact`);
+    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={go} disabled={busy}>
+      {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Call with AI
+    </Button>
   );
 }

@@ -42,6 +42,7 @@ import { Route as AppCampaignsRouteImport } from './routes/_app.campaigns'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAreasRouteImport } from './routes/_app.areas'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
+import { Route as AppAiCallerRouteImport } from './routes/_app.ai-caller'
 import { Route as AppAgencyRouteImport } from './routes/_app.agency'
 import { Route as ApiPublicProposalViewRouteImport } from './routes/api/public/proposal-view'
 import { Route as ApiPublicPortalViewRouteImport } from './routes/api/public/portal-view'
@@ -227,6 +228,11 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiCallerRoute = AppAiCallerRouteImport.update({
+  id: '/ai-caller',
+  path: '/ai-caller',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAgencyRoute = AppAgencyRouteImport.update({
   id: '/agency',
   path: '/agency',
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRouteWithChildren
   '/agency': typeof AppAgencyRoute
+  '/ai-caller': typeof AppAiCallerRoute
   '/analytics': typeof AppAnalyticsRoute
   '/areas': typeof AppAreasRoute
   '/automations': typeof AppAutomationsRoute
@@ -407,6 +414,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRouteWithChildren
   '/agency': typeof AppAgencyRoute
+  '/ai-caller': typeof AppAiCallerRoute
   '/analytics': typeof AppAnalyticsRoute
   '/areas': typeof AppAreasRoute
   '/automations': typeof AppAutomationsRoute
@@ -464,6 +472,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRouteWithChildren
   '/_app/agency': typeof AppAgencyRoute
+  '/_app/ai-caller': typeof AppAiCallerRoute
   '/_app/analytics': typeof AppAnalyticsRoute
   '/_app/areas': typeof AppAreasRoute
   '/_app/automations': typeof AppAutomationsRoute
@@ -520,6 +529,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/agency'
+    | '/ai-caller'
     | '/analytics'
     | '/areas'
     | '/automations'
@@ -574,6 +584,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/agency'
+    | '/ai-caller'
     | '/analytics'
     | '/areas'
     | '/automations'
@@ -630,6 +641,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_app/agency'
+    | '/_app/ai-caller'
     | '/_app/analytics'
     | '/_app/areas'
     | '/_app/automations'
@@ -943,6 +955,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ai-caller': {
+      id: '/_app/ai-caller'
+      path: '/ai-caller'
+      fullPath: '/ai-caller'
+      preLoaderRoute: typeof AppAiCallerRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/agency': {
       id: '/_app/agency'
       path: '/agency'
@@ -1130,6 +1149,7 @@ const AppWorkflowsRouteWithChildren = AppWorkflowsRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAgencyRoute: typeof AppAgencyRoute
+  AppAiCallerRoute: typeof AppAiCallerRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAreasRoute: typeof AppAreasRoute
   AppAutomationsRoute: typeof AppAutomationsRoute
@@ -1151,6 +1171,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgencyRoute: AppAgencyRoute,
+  AppAiCallerRoute: AppAiCallerRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAreasRoute: AppAreasRoute,
   AppAutomationsRoute: AppAutomationsRoute,
