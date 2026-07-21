@@ -298,3 +298,25 @@ function SocialProfilesCard({
     </Card>
   );
 }
+
+function AiCallerButton({ phoneNumber, contactId }: { phoneNumber: string; contactId: string }) {
+  const listAgentsFn = useServerFn(listAgents);
+  const startAi = useServerFn(startAiCall);
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true);
+    try {
+      const agents = (await listAgentsFn()) as any[];
+      const active = agents.find((a: any) => a.status === "active") ?? agents[0];
+      if (!active) { toast.error("Create an AI caller first in AI Caller → New agent"); return; }
+      await startAi({ data: { agent_id: active.id, contact_id: contactId, phone_number: phoneNumber } });
+      toast.success(`${active.name} queued this contact`);
+    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={go} disabled={busy}>
+      {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Call with AI
+    </Button>
+  );
+}
