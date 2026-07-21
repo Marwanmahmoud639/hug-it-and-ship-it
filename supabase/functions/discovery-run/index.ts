@@ -642,39 +642,31 @@ async function webSearch(
 async function serperFreeDmHunt(
   companyName: string,
   location: string | null,
-  serperKey: string,
+  serperKey: string | null,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
   const queries = [
     `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President)`,
     `site:biggerpockets.com "${companyName}"`,
     `site:facebook.com "${companyName}" owner`,
     `"${companyName}" CEO OR owner OR founder${location ? ` ${location}` : ""}`,
+    // Loose fallback matching user's example URL shape: name + full company
+    `${companyName}${location ? ` ${location}` : ""} owner OR founder`,
   ];
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
   for (const q of queries) {
     try {
-      const res = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, num: 5 }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const organic = (data.organic || []) as any[];
+      const { organic } = await webSearch(q, { serperKey, num: 6 });
       for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         const roleMatch = blob.match(ROLE_RX);
         if (!roleMatch) continue;
-        // LinkedIn URL: title looks like "John Doe - CEO - Acme | LinkedIn"
         const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
         const candidateName = titleParts[0] || "";
-        // Validate it looks like a real name: at least 2 words, not all numbers, reasonable length
-        // Relaxed from strict capitalization — handles TJ Smith, José García, Jr. suffixes etc.
         const words = candidateName.trim().split(/\s+/);
         if (words.length < 2 || words.length > 5) continue;
         if (candidateName.length < 4 || candidateName.length > 60) continue;
-        if (/^[\d\W]+$/.test(candidateName)) continue; // all non-letter
-        if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue; // starts with article
+        if (/^[\d\W]+$/.test(candidateName)) continue;
+        if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue;
         const source = (r.link || "").includes("linkedin.com") ? "linkedin"
           : (r.link || "").includes("biggerpockets.com") ? "biggerpockets"
           : (r.link || "").includes("facebook.com") ? "facebook"
