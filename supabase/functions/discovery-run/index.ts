@@ -1334,9 +1334,9 @@ async function runPipeline(searchId: string) {
       const lnk = b.raw?.apollo?.top?.linkedin_url;
       if (lnk) b.linkedin_url ||= lnk;
     }
-    // Serper lookups for other socials (parallel across businesses, capped batch size)
-    const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
-    if (serperKey) {
+    // Socials via web search (Serper if key present, else DuckDuckGo/Google SERP)
+    const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
+    {
       const BATCH = 5;
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
@@ -1352,9 +1352,9 @@ async function runPipeline(searchId: string) {
     for (const b of merged) {
       if (b.linkedin_url || b.facebook_url || b.instagram_url || b.twitter_url || b.youtube_url) socialCount++;
     }
-    const socialOk = ["linkedin"];
+    const socialOk = ["linkedin", "web_search"];
     const socialFail: string[] = [];
-    if (serperKey) socialOk.push("serper"); else socialFail.push("serper");
+    if (serperKey) socialOk.push("serper");
     await setStepDone(searchId, teamId, "social", { count: socialCount }, socialOk, socialFail);
     await logActivity(searchId, teamId, "social", "success", "🌐", `Found social profiles for ${socialCount} contacts`, { count: socialCount, percent: 55 });
 
