@@ -33,10 +33,12 @@ export const Route = createFileRoute("/_app/discovery")({
         <TabsList>
           <TabsTrigger value="businesses">Businesses</TabsTrigger>
           <TabsTrigger value="individuals">Individuals</TabsTrigger>
+          <TabsTrigger value="lookup">People Lookup</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="businesses" className="flex-1 m-0 overflow-hidden"><DiscoveryPage /></TabsContent>
       <TabsContent value="individuals" className="flex-1 m-0 overflow-hidden"><IndividualsTab /></TabsContent>
+      <TabsContent value="lookup" className="flex-1 m-0 overflow-hidden"><PeopleLookupTab /></TabsContent>
     </Tabs>
   ),
 });
