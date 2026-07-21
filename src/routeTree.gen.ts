@@ -9,38 +9,772 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ActivateRouteImport } from './routes/activate'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UnsubscribeTokenRouteImport } from './routes/unsubscribe.$token'
+import { Route as SignupPendingRouteImport } from './routes/signup.pending'
+import { Route as ProposalTokenRouteImport } from './routes/proposal.$token'
+import { Route as PortalTokenRouteImport } from './routes/portal.$token'
+import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AppWorkflowsRouteImport } from './routes/_app.workflows'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
+import { Route as AppSuperAdminRouteImport } from './routes/_app.super-admin'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppProposalsRouteImport } from './routes/_app.proposals'
+import { Route as AppPortalsRouteImport } from './routes/_app.portals'
+import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
+import { Route as AppMonitorsRouteImport } from './routes/_app.monitors'
+import { Route as AppInboxRouteImport } from './routes/_app.inbox'
+import { Route as AppDiscoveryRouteImport } from './routes/_app.discovery'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppContactsRouteImport } from './routes/_app.contacts'
+import { Route as AppCampaignsRouteImport } from './routes/_app.campaigns'
+import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppAreasRouteImport } from './routes/_app.areas'
+import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
+import { Route as AppAgencyRouteImport } from './routes/_app.agency'
+import { Route as ApiPublicProposalViewRouteImport } from './routes/api/public/proposal-view'
+import { Route as ApiPublicPortalViewRouteImport } from './routes/api/public/portal-view'
+import { Route as AppWorkflowsIdRouteImport } from './routes/_app.workflows.$id'
+import { Route as AppReviewIdRouteImport } from './routes/_app.review.$id'
+import { Route as AppContactsIdRouteImport } from './routes/_app.contacts.$id'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicWebhooksWhopRouteImport } from './routes/api/public/webhooks/whop'
+import { Route as ApiPublicWebhooksInboundSmsRouteImport } from './routes/api/public/webhooks/inbound-sms'
+import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
+import { Route as ApiPublicTwilioSmsInboundRouteImport } from './routes/api/public/twilio/sms-inbound'
+import { Route as ApiPublicHooksRunWorkflowJobsRouteImport } from './routes/api/public/hooks/run-workflow-jobs'
+import { Route as ApiPublicHooksRunTaskRemindersRouteImport } from './routes/api/public/hooks/run-task-reminders'
+import { Route as ApiPublicHooksRunMonitorsRouteImport } from './routes/api/public/hooks/run-monitors'
+import { Route as ApiPublicHooksRunComplianceJobsRouteImport } from './routes/api/public/hooks/run-compliance-jobs'
+import { Route as ApiPublicHooksRetryNotificationsRouteImport } from './routes/api/public/hooks/retry-notifications'
+import { Route as ApiPublicHooksLoginRequestNotifyRouteImport } from './routes/api/public/hooks/login-request-notify'
+import { Route as ApiPublicHooksCheckCampaignHealthRouteImport } from './routes/api/public/hooks/check-campaign-health'
+import { Route as ApiPublicBrandSubRouteImport } from './routes/api/public/brand.$sub'
+import { Route as ApiPublicDialerSmsInboundProviderRouteImport } from './routes/api/public/dialer/sms-inbound.$provider'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivateRoute = ActivateRouteImport.update({
+  id: '/activate',
+  path: '/activate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UnsubscribeTokenRoute = UnsubscribeTokenRouteImport.update({
+  id: '/unsubscribe/$token',
+  path: '/unsubscribe/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupPendingRoute = SignupPendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
+  getParentRoute: () => SignupRoute,
+} as any)
+const ProposalTokenRoute = ProposalTokenRouteImport.update({
+  id: '/proposal/$token',
+  path: '/proposal/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalTokenRoute = PortalTokenRouteImport.update({
+  id: '/portal/$token',
+  path: '/portal/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AppWorkflowsRoute = AppWorkflowsRouteImport.update({
+  id: '/workflows',
+  path: '/workflows',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuperAdminRoute = AppSuperAdminRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProposalsRoute = AppProposalsRouteImport.update({
+  id: '/proposals',
+  path: '/proposals',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPortalsRoute = AppPortalsRouteImport.update({
+  id: '/portals',
+  path: '/portals',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMonitorsRoute = AppMonitorsRouteImport.update({
+  id: '/monitors',
+  path: '/monitors',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDiscoveryRoute = AppDiscoveryRouteImport.update({
+  id: '/discovery',
+  path: '/discovery',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContactsRoute = AppContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCampaignsRoute = AppCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAutomationsRoute = AppAutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAreasRoute = AppAreasRouteImport.update({
+  id: '/areas',
+  path: '/areas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAgencyRoute = AppAgencyRouteImport.update({
+  id: '/agency',
+  path: '/agency',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiPublicProposalViewRoute = ApiPublicProposalViewRouteImport.update({
+  id: '/api/public/proposal-view',
+  path: '/api/public/proposal-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPortalViewRoute = ApiPublicPortalViewRouteImport.update({
+  id: '/api/public/portal-view',
+  path: '/api/public/portal-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppWorkflowsIdRoute = AppWorkflowsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppWorkflowsRoute,
+} as any)
+const AppReviewIdRoute = AppReviewIdRouteImport.update({
+  id: '/review/$id',
+  path: '/review/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContactsIdRoute = AppContactsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppContactsRoute,
+} as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksWhopRoute = ApiPublicWebhooksWhopRouteImport.update({
+  id: '/api/public/webhooks/whop',
+  path: '/api/public/webhooks/whop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksInboundSmsRoute =
+  ApiPublicWebhooksInboundSmsRouteImport.update({
+    id: '/api/public/webhooks/inbound-sms',
+    path: '/api/public/webhooks/inbound-sms',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
+  id: '/api/public/twilio/voice',
+  path: '/api/public/twilio/voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTwilioSmsInboundRoute =
+  ApiPublicTwilioSmsInboundRouteImport.update({
+    id: '/api/public/twilio/sms-inbound',
+    path: '/api/public/twilio/sms-inbound',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRunWorkflowJobsRoute =
+  ApiPublicHooksRunWorkflowJobsRouteImport.update({
+    id: '/api/public/hooks/run-workflow-jobs',
+    path: '/api/public/hooks/run-workflow-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRunTaskRemindersRoute =
+  ApiPublicHooksRunTaskRemindersRouteImport.update({
+    id: '/api/public/hooks/run-task-reminders',
+    path: '/api/public/hooks/run-task-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRunMonitorsRoute =
+  ApiPublicHooksRunMonitorsRouteImport.update({
+    id: '/api/public/hooks/run-monitors',
+    path: '/api/public/hooks/run-monitors',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRunComplianceJobsRoute =
+  ApiPublicHooksRunComplianceJobsRouteImport.update({
+    id: '/api/public/hooks/run-compliance-jobs',
+    path: '/api/public/hooks/run-compliance-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRetryNotificationsRoute =
+  ApiPublicHooksRetryNotificationsRouteImport.update({
+    id: '/api/public/hooks/retry-notifications',
+    path: '/api/public/hooks/retry-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksLoginRequestNotifyRoute =
+  ApiPublicHooksLoginRequestNotifyRouteImport.update({
+    id: '/api/public/hooks/login-request-notify',
+    path: '/api/public/hooks/login-request-notify',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksCheckCampaignHealthRoute =
+  ApiPublicHooksCheckCampaignHealthRouteImport.update({
+    id: '/api/public/hooks/check-campaign-health',
+    path: '/api/public/hooks/check-campaign-health',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicBrandSubRoute = ApiPublicBrandSubRouteImport.update({
+  id: '/api/public/brand/$sub',
+  path: '/api/public/brand/$sub',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicDialerSmsInboundProviderRoute =
+  ApiPublicDialerSmsInboundProviderRouteImport.update({
+    id: '/api/public/dialer/sms-inbound/$provider',
+    path: '/api/public/dialer/sms-inbound/$provider',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/activate': typeof ActivateRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRouteWithChildren
+  '/agency': typeof AppAgencyRoute
+  '/analytics': typeof AppAnalyticsRoute
+  '/areas': typeof AppAreasRoute
+  '/automations': typeof AppAutomationsRoute
+  '/campaigns': typeof AppCampaignsRoute
+  '/contacts': typeof AppContactsRouteWithChildren
+  '/dashboard': typeof AppDashboardRoute
+  '/discovery': typeof AppDiscoveryRoute
+  '/inbox': typeof AppInboxRoute
+  '/monitors': typeof AppMonitorsRoute
+  '/pipeline': typeof AppPipelineRoute
+  '/portals': typeof AppPortalsRoute
+  '/proposals': typeof AppProposalsRoute
+  '/settings': typeof AppSettingsRoute
+  '/super-admin': typeof AppSuperAdminRoute
+  '/team': typeof AppTeamRoute
+  '/workflows': typeof AppWorkflowsRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/portal/$token': typeof PortalTokenRoute
+  '/proposal/$token': typeof ProposalTokenRoute
+  '/signup/pending': typeof SignupPendingRoute
+  '/unsubscribe/$token': typeof UnsubscribeTokenRoute
+  '/contacts/$id': typeof AppContactsIdRoute
+  '/review/$id': typeof AppReviewIdRoute
+  '/workflows/$id': typeof AppWorkflowsIdRoute
+  '/api/public/portal-view': typeof ApiPublicPortalViewRoute
+  '/api/public/proposal-view': typeof ApiPublicProposalViewRoute
+  '/api/public/brand/$sub': typeof ApiPublicBrandSubRoute
+  '/api/public/hooks/check-campaign-health': typeof ApiPublicHooksCheckCampaignHealthRoute
+  '/api/public/hooks/login-request-notify': typeof ApiPublicHooksLoginRequestNotifyRoute
+  '/api/public/hooks/retry-notifications': typeof ApiPublicHooksRetryNotificationsRoute
+  '/api/public/hooks/run-compliance-jobs': typeof ApiPublicHooksRunComplianceJobsRoute
+  '/api/public/hooks/run-monitors': typeof ApiPublicHooksRunMonitorsRoute
+  '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
+  '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
+  '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
+  '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
+  '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/activate': typeof ActivateRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRouteWithChildren
+  '/agency': typeof AppAgencyRoute
+  '/analytics': typeof AppAnalyticsRoute
+  '/areas': typeof AppAreasRoute
+  '/automations': typeof AppAutomationsRoute
+  '/campaigns': typeof AppCampaignsRoute
+  '/contacts': typeof AppContactsRouteWithChildren
+  '/dashboard': typeof AppDashboardRoute
+  '/discovery': typeof AppDiscoveryRoute
+  '/inbox': typeof AppInboxRoute
+  '/monitors': typeof AppMonitorsRoute
+  '/pipeline': typeof AppPipelineRoute
+  '/portals': typeof AppPortalsRoute
+  '/proposals': typeof AppProposalsRoute
+  '/settings': typeof AppSettingsRoute
+  '/super-admin': typeof AppSuperAdminRoute
+  '/team': typeof AppTeamRoute
+  '/workflows': typeof AppWorkflowsRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/portal/$token': typeof PortalTokenRoute
+  '/proposal/$token': typeof ProposalTokenRoute
+  '/signup/pending': typeof SignupPendingRoute
+  '/unsubscribe/$token': typeof UnsubscribeTokenRoute
+  '/contacts/$id': typeof AppContactsIdRoute
+  '/review/$id': typeof AppReviewIdRoute
+  '/workflows/$id': typeof AppWorkflowsIdRoute
+  '/api/public/portal-view': typeof ApiPublicPortalViewRoute
+  '/api/public/proposal-view': typeof ApiPublicProposalViewRoute
+  '/api/public/brand/$sub': typeof ApiPublicBrandSubRoute
+  '/api/public/hooks/check-campaign-health': typeof ApiPublicHooksCheckCampaignHealthRoute
+  '/api/public/hooks/login-request-notify': typeof ApiPublicHooksLoginRequestNotifyRoute
+  '/api/public/hooks/retry-notifications': typeof ApiPublicHooksRetryNotificationsRoute
+  '/api/public/hooks/run-compliance-jobs': typeof ApiPublicHooksRunComplianceJobsRoute
+  '/api/public/hooks/run-monitors': typeof ApiPublicHooksRunMonitorsRoute
+  '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
+  '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
+  '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
+  '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
+  '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_app': typeof AppRouteWithChildren
+  '/account': typeof AccountRoute
+  '/activate': typeof ActivateRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRouteWithChildren
+  '/_app/agency': typeof AppAgencyRoute
+  '/_app/analytics': typeof AppAnalyticsRoute
+  '/_app/areas': typeof AppAreasRoute
+  '/_app/automations': typeof AppAutomationsRoute
+  '/_app/campaigns': typeof AppCampaignsRoute
+  '/_app/contacts': typeof AppContactsRouteWithChildren
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/discovery': typeof AppDiscoveryRoute
+  '/_app/inbox': typeof AppInboxRoute
+  '/_app/monitors': typeof AppMonitorsRoute
+  '/_app/pipeline': typeof AppPipelineRoute
+  '/_app/portals': typeof AppPortalsRoute
+  '/_app/proposals': typeof AppProposalsRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/super-admin': typeof AppSuperAdminRoute
+  '/_app/team': typeof AppTeamRoute
+  '/_app/workflows': typeof AppWorkflowsRouteWithChildren
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/portal/$token': typeof PortalTokenRoute
+  '/proposal/$token': typeof ProposalTokenRoute
+  '/signup/pending': typeof SignupPendingRoute
+  '/unsubscribe/$token': typeof UnsubscribeTokenRoute
+  '/_app/contacts/$id': typeof AppContactsIdRoute
+  '/_app/review/$id': typeof AppReviewIdRoute
+  '/_app/workflows/$id': typeof AppWorkflowsIdRoute
+  '/api/public/portal-view': typeof ApiPublicPortalViewRoute
+  '/api/public/proposal-view': typeof ApiPublicProposalViewRoute
+  '/api/public/brand/$sub': typeof ApiPublicBrandSubRoute
+  '/api/public/hooks/check-campaign-health': typeof ApiPublicHooksCheckCampaignHealthRoute
+  '/api/public/hooks/login-request-notify': typeof ApiPublicHooksLoginRequestNotifyRoute
+  '/api/public/hooks/retry-notifications': typeof ApiPublicHooksRetryNotificationsRoute
+  '/api/public/hooks/run-compliance-jobs': typeof ApiPublicHooksRunComplianceJobsRoute
+  '/api/public/hooks/run-monitors': typeof ApiPublicHooksRunMonitorsRoute
+  '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
+  '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
+  '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
+  '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
+  '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
+  '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/account'
+    | '/activate'
+    | '/forgot-password'
+    | '/login'
+    | '/pricing'
+    | '/reset-password'
+    | '/signup'
+    | '/agency'
+    | '/analytics'
+    | '/areas'
+    | '/automations'
+    | '/campaigns'
+    | '/contacts'
+    | '/dashboard'
+    | '/discovery'
+    | '/inbox'
+    | '/monitors'
+    | '/pipeline'
+    | '/portals'
+    | '/proposals'
+    | '/settings'
+    | '/super-admin'
+    | '/team'
+    | '/workflows'
+    | '/admin'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/portal/$token'
+    | '/proposal/$token'
+    | '/signup/pending'
+    | '/unsubscribe/$token'
+    | '/contacts/$id'
+    | '/review/$id'
+    | '/workflows/$id'
+    | '/api/public/portal-view'
+    | '/api/public/proposal-view'
+    | '/api/public/brand/$sub'
+    | '/api/public/hooks/check-campaign-health'
+    | '/api/public/hooks/login-request-notify'
+    | '/api/public/hooks/retry-notifications'
+    | '/api/public/hooks/run-compliance-jobs'
+    | '/api/public/hooks/run-monitors'
+    | '/api/public/hooks/run-task-reminders'
+    | '/api/public/hooks/run-workflow-jobs'
+    | '/api/public/twilio/sms-inbound'
+    | '/api/public/twilio/voice'
+    | '/api/public/webhooks/inbound-sms'
+    | '/api/public/webhooks/whop'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
+    | '/api/public/dialer/sms-inbound/$provider'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/account'
+    | '/activate'
+    | '/forgot-password'
+    | '/login'
+    | '/pricing'
+    | '/reset-password'
+    | '/signup'
+    | '/agency'
+    | '/analytics'
+    | '/areas'
+    | '/automations'
+    | '/campaigns'
+    | '/contacts'
+    | '/dashboard'
+    | '/discovery'
+    | '/inbox'
+    | '/monitors'
+    | '/pipeline'
+    | '/portals'
+    | '/proposals'
+    | '/settings'
+    | '/super-admin'
+    | '/team'
+    | '/workflows'
+    | '/admin'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/portal/$token'
+    | '/proposal/$token'
+    | '/signup/pending'
+    | '/unsubscribe/$token'
+    | '/contacts/$id'
+    | '/review/$id'
+    | '/workflows/$id'
+    | '/api/public/portal-view'
+    | '/api/public/proposal-view'
+    | '/api/public/brand/$sub'
+    | '/api/public/hooks/check-campaign-health'
+    | '/api/public/hooks/login-request-notify'
+    | '/api/public/hooks/retry-notifications'
+    | '/api/public/hooks/run-compliance-jobs'
+    | '/api/public/hooks/run-monitors'
+    | '/api/public/hooks/run-task-reminders'
+    | '/api/public/hooks/run-workflow-jobs'
+    | '/api/public/twilio/sms-inbound'
+    | '/api/public/twilio/voice'
+    | '/api/public/webhooks/inbound-sms'
+    | '/api/public/webhooks/whop'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
+    | '/api/public/dialer/sms-inbound/$provider'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/_app'
+    | '/account'
+    | '/activate'
+    | '/forgot-password'
+    | '/login'
+    | '/pricing'
+    | '/reset-password'
+    | '/signup'
+    | '/_app/agency'
+    | '/_app/analytics'
+    | '/_app/areas'
+    | '/_app/automations'
+    | '/_app/campaigns'
+    | '/_app/contacts'
+    | '/_app/dashboard'
+    | '/_app/discovery'
+    | '/_app/inbox'
+    | '/_app/monitors'
+    | '/_app/pipeline'
+    | '/_app/portals'
+    | '/_app/proposals'
+    | '/_app/settings'
+    | '/_app/super-admin'
+    | '/_app/team'
+    | '/_app/workflows'
+    | '/_authenticated/admin'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/portal/$token'
+    | '/proposal/$token'
+    | '/signup/pending'
+    | '/unsubscribe/$token'
+    | '/_app/contacts/$id'
+    | '/_app/review/$id'
+    | '/_app/workflows/$id'
+    | '/api/public/portal-view'
+    | '/api/public/proposal-view'
+    | '/api/public/brand/$sub'
+    | '/api/public/hooks/check-campaign-health'
+    | '/api/public/hooks/login-request-notify'
+    | '/api/public/hooks/retry-notifications'
+    | '/api/public/hooks/run-compliance-jobs'
+    | '/api/public/hooks/run-monitors'
+    | '/api/public/hooks/run-task-reminders'
+    | '/api/public/hooks/run-workflow-jobs'
+    | '/api/public/twilio/sms-inbound'
+    | '/api/public/twilio/voice'
+    | '/api/public/webhooks/inbound-sms'
+    | '/api/public/webhooks/whop'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
+    | '/api/public/dialer/sms-inbound/$provider'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AppRoute: typeof AppRouteWithChildren
+  AccountRoute: typeof AccountRoute
+  ActivateRoute: typeof ActivateRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  PricingRoute: typeof PricingRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRouteWithChildren
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
+  PortalTokenRoute: typeof PortalTokenRoute
+  ProposalTokenRoute: typeof ProposalTokenRoute
+  UnsubscribeTokenRoute: typeof UnsubscribeTokenRoute
+  ApiPublicPortalViewRoute: typeof ApiPublicPortalViewRoute
+  ApiPublicProposalViewRoute: typeof ApiPublicProposalViewRoute
+  ApiPublicBrandSubRoute: typeof ApiPublicBrandSubRoute
+  ApiPublicHooksCheckCampaignHealthRoute: typeof ApiPublicHooksCheckCampaignHealthRoute
+  ApiPublicHooksLoginRequestNotifyRoute: typeof ApiPublicHooksLoginRequestNotifyRoute
+  ApiPublicHooksRetryNotificationsRoute: typeof ApiPublicHooksRetryNotificationsRoute
+  ApiPublicHooksRunComplianceJobsRoute: typeof ApiPublicHooksRunComplianceJobsRoute
+  ApiPublicHooksRunMonitorsRoute: typeof ApiPublicHooksRunMonitorsRoute
+  ApiPublicHooksRunTaskRemindersRoute: typeof ApiPublicHooksRunTaskRemindersRoute
+  ApiPublicHooksRunWorkflowJobsRoute: typeof ApiPublicHooksRunWorkflowJobsRoute
+  ApiPublicTwilioSmsInboundRoute: typeof ApiPublicTwilioSmsInboundRoute
+  ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
+  ApiPublicWebhooksInboundSmsRoute: typeof ApiPublicWebhooksInboundSmsRoute
+  ApiPublicWebhooksWhopRoute: typeof ApiPublicWebhooksWhopRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
+  ApiPublicDialerSmsInboundProviderRoute: typeof ApiPublicDialerSmsInboundProviderRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activate': {
+      id: '/activate'
+      path: '/activate'
+      fullPath: '/activate'
+      preLoaderRoute: typeof ActivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +782,443 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/unsubscribe/$token': {
+      id: '/unsubscribe/$token'
+      path: '/unsubscribe/$token'
+      fullPath: '/unsubscribe/$token'
+      preLoaderRoute: typeof UnsubscribeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup/pending': {
+      id: '/signup/pending'
+      path: '/pending'
+      fullPath: '/signup/pending'
+      preLoaderRoute: typeof SignupPendingRouteImport
+      parentRoute: typeof SignupRoute
+    }
+    '/proposal/$token': {
+      id: '/proposal/$token'
+      path: '/proposal/$token'
+      fullPath: '/proposal/$token'
+      preLoaderRoute: typeof ProposalTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/$token': {
+      id: '/portal/$token'
+      path: '/portal/$token'
+      fullPath: '/portal/$token'
+      preLoaderRoute: typeof PortalTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_app/workflows': {
+      id: '/_app/workflows'
+      path: '/workflows'
+      fullPath: '/workflows'
+      preLoaderRoute: typeof AppWorkflowsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/super-admin': {
+      id: '/_app/super-admin'
+      path: '/super-admin'
+      fullPath: '/super-admin'
+      preLoaderRoute: typeof AppSuperAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/proposals': {
+      id: '/_app/proposals'
+      path: '/proposals'
+      fullPath: '/proposals'
+      preLoaderRoute: typeof AppProposalsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/portals': {
+      id: '/_app/portals'
+      path: '/portals'
+      fullPath: '/portals'
+      preLoaderRoute: typeof AppPortalsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pipeline': {
+      id: '/_app/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/monitors': {
+      id: '/_app/monitors'
+      path: '/monitors'
+      fullPath: '/monitors'
+      preLoaderRoute: typeof AppMonitorsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inbox': {
+      id: '/_app/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/discovery': {
+      id: '/_app/discovery'
+      path: '/discovery'
+      fullPath: '/discovery'
+      preLoaderRoute: typeof AppDiscoveryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contacts': {
+      id: '/_app/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AppContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/campaigns': {
+      id: '/_app/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof AppCampaignsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/automations': {
+      id: '/_app/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AppAutomationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/areas': {
+      id: '/_app/areas'
+      path: '/areas'
+      fullPath: '/areas'
+      preLoaderRoute: typeof AppAreasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/analytics': {
+      id: '/_app/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/agency': {
+      id: '/_app/agency'
+      path: '/agency'
+      fullPath: '/agency'
+      preLoaderRoute: typeof AppAgencyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/public/proposal-view': {
+      id: '/api/public/proposal-view'
+      path: '/api/public/proposal-view'
+      fullPath: '/api/public/proposal-view'
+      preLoaderRoute: typeof ApiPublicProposalViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/portal-view': {
+      id: '/api/public/portal-view'
+      path: '/api/public/portal-view'
+      fullPath: '/api/public/portal-view'
+      preLoaderRoute: typeof ApiPublicPortalViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/workflows/$id': {
+      id: '/_app/workflows/$id'
+      path: '/$id'
+      fullPath: '/workflows/$id'
+      preLoaderRoute: typeof AppWorkflowsIdRouteImport
+      parentRoute: typeof AppWorkflowsRoute
+    }
+    '/_app/review/$id': {
+      id: '/_app/review/$id'
+      path: '/review/$id'
+      fullPath: '/review/$id'
+      preLoaderRoute: typeof AppReviewIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contacts/$id': {
+      id: '/_app/contacts/$id'
+      path: '/$id'
+      fullPath: '/contacts/$id'
+      preLoaderRoute: typeof AppContactsIdRouteImport
+      parentRoute: typeof AppContactsRoute
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/whop': {
+      id: '/api/public/webhooks/whop'
+      path: '/api/public/webhooks/whop'
+      fullPath: '/api/public/webhooks/whop'
+      preLoaderRoute: typeof ApiPublicWebhooksWhopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/inbound-sms': {
+      id: '/api/public/webhooks/inbound-sms'
+      path: '/api/public/webhooks/inbound-sms'
+      fullPath: '/api/public/webhooks/inbound-sms'
+      preLoaderRoute: typeof ApiPublicWebhooksInboundSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/voice': {
+      id: '/api/public/twilio/voice'
+      path: '/api/public/twilio/voice'
+      fullPath: '/api/public/twilio/voice'
+      preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/sms-inbound': {
+      id: '/api/public/twilio/sms-inbound'
+      path: '/api/public/twilio/sms-inbound'
+      fullPath: '/api/public/twilio/sms-inbound'
+      preLoaderRoute: typeof ApiPublicTwilioSmsInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/run-workflow-jobs': {
+      id: '/api/public/hooks/run-workflow-jobs'
+      path: '/api/public/hooks/run-workflow-jobs'
+      fullPath: '/api/public/hooks/run-workflow-jobs'
+      preLoaderRoute: typeof ApiPublicHooksRunWorkflowJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/run-task-reminders': {
+      id: '/api/public/hooks/run-task-reminders'
+      path: '/api/public/hooks/run-task-reminders'
+      fullPath: '/api/public/hooks/run-task-reminders'
+      preLoaderRoute: typeof ApiPublicHooksRunTaskRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/run-monitors': {
+      id: '/api/public/hooks/run-monitors'
+      path: '/api/public/hooks/run-monitors'
+      fullPath: '/api/public/hooks/run-monitors'
+      preLoaderRoute: typeof ApiPublicHooksRunMonitorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/run-compliance-jobs': {
+      id: '/api/public/hooks/run-compliance-jobs'
+      path: '/api/public/hooks/run-compliance-jobs'
+      fullPath: '/api/public/hooks/run-compliance-jobs'
+      preLoaderRoute: typeof ApiPublicHooksRunComplianceJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/retry-notifications': {
+      id: '/api/public/hooks/retry-notifications'
+      path: '/api/public/hooks/retry-notifications'
+      fullPath: '/api/public/hooks/retry-notifications'
+      preLoaderRoute: typeof ApiPublicHooksRetryNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/login-request-notify': {
+      id: '/api/public/hooks/login-request-notify'
+      path: '/api/public/hooks/login-request-notify'
+      fullPath: '/api/public/hooks/login-request-notify'
+      preLoaderRoute: typeof ApiPublicHooksLoginRequestNotifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/check-campaign-health': {
+      id: '/api/public/hooks/check-campaign-health'
+      path: '/api/public/hooks/check-campaign-health'
+      fullPath: '/api/public/hooks/check-campaign-health'
+      preLoaderRoute: typeof ApiPublicHooksCheckCampaignHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/brand/$sub': {
+      id: '/api/public/brand/$sub'
+      path: '/api/public/brand/$sub'
+      fullPath: '/api/public/brand/$sub'
+      preLoaderRoute: typeof ApiPublicBrandSubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/dialer/sms-inbound/$provider': {
+      id: '/api/public/dialer/sms-inbound/$provider'
+      path: '/api/public/dialer/sms-inbound/$provider'
+      fullPath: '/api/public/dialer/sms-inbound/$provider'
+      preLoaderRoute: typeof ApiPublicDialerSmsInboundProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+interface AppContactsRouteChildren {
+  AppContactsIdRoute: typeof AppContactsIdRoute
+}
+
+const AppContactsRouteChildren: AppContactsRouteChildren = {
+  AppContactsIdRoute: AppContactsIdRoute,
+}
+
+const AppContactsRouteWithChildren = AppContactsRoute._addFileChildren(
+  AppContactsRouteChildren,
+)
+
+interface AppWorkflowsRouteChildren {
+  AppWorkflowsIdRoute: typeof AppWorkflowsIdRoute
+}
+
+const AppWorkflowsRouteChildren: AppWorkflowsRouteChildren = {
+  AppWorkflowsIdRoute: AppWorkflowsIdRoute,
+}
+
+const AppWorkflowsRouteWithChildren = AppWorkflowsRoute._addFileChildren(
+  AppWorkflowsRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppAgencyRoute: typeof AppAgencyRoute
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
+  AppAreasRoute: typeof AppAreasRoute
+  AppAutomationsRoute: typeof AppAutomationsRoute
+  AppCampaignsRoute: typeof AppCampaignsRoute
+  AppContactsRoute: typeof AppContactsRouteWithChildren
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppDiscoveryRoute: typeof AppDiscoveryRoute
+  AppInboxRoute: typeof AppInboxRoute
+  AppMonitorsRoute: typeof AppMonitorsRoute
+  AppPipelineRoute: typeof AppPipelineRoute
+  AppPortalsRoute: typeof AppPortalsRoute
+  AppProposalsRoute: typeof AppProposalsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppSuperAdminRoute: typeof AppSuperAdminRoute
+  AppTeamRoute: typeof AppTeamRoute
+  AppWorkflowsRoute: typeof AppWorkflowsRouteWithChildren
+  AppReviewIdRoute: typeof AppReviewIdRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAgencyRoute: AppAgencyRoute,
+  AppAnalyticsRoute: AppAnalyticsRoute,
+  AppAreasRoute: AppAreasRoute,
+  AppAutomationsRoute: AppAutomationsRoute,
+  AppCampaignsRoute: AppCampaignsRoute,
+  AppContactsRoute: AppContactsRouteWithChildren,
+  AppDashboardRoute: AppDashboardRoute,
+  AppDiscoveryRoute: AppDiscoveryRoute,
+  AppInboxRoute: AppInboxRoute,
+  AppMonitorsRoute: AppMonitorsRoute,
+  AppPipelineRoute: AppPipelineRoute,
+  AppPortalsRoute: AppPortalsRoute,
+  AppProposalsRoute: AppProposalsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppSuperAdminRoute: AppSuperAdminRoute,
+  AppTeamRoute: AppTeamRoute,
+  AppWorkflowsRoute: AppWorkflowsRouteWithChildren,
+  AppReviewIdRoute: AppReviewIdRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+interface SignupRouteChildren {
+  SignupPendingRoute: typeof SignupPendingRoute
+}
+
+const SignupRouteChildren: SignupRouteChildren = {
+  SignupPendingRoute: SignupPendingRoute,
+}
+
+const SignupRouteWithChildren =
+  SignupRoute._addFileChildren(SignupRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
+  AccountRoute: AccountRoute,
+  ActivateRoute: ActivateRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  PricingRoute: PricingRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRouteWithChildren,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
+  PortalTokenRoute: PortalTokenRoute,
+  ProposalTokenRoute: ProposalTokenRoute,
+  UnsubscribeTokenRoute: UnsubscribeTokenRoute,
+  ApiPublicPortalViewRoute: ApiPublicPortalViewRoute,
+  ApiPublicProposalViewRoute: ApiPublicProposalViewRoute,
+  ApiPublicBrandSubRoute: ApiPublicBrandSubRoute,
+  ApiPublicHooksCheckCampaignHealthRoute:
+    ApiPublicHooksCheckCampaignHealthRoute,
+  ApiPublicHooksLoginRequestNotifyRoute: ApiPublicHooksLoginRequestNotifyRoute,
+  ApiPublicHooksRetryNotificationsRoute: ApiPublicHooksRetryNotificationsRoute,
+  ApiPublicHooksRunComplianceJobsRoute: ApiPublicHooksRunComplianceJobsRoute,
+  ApiPublicHooksRunMonitorsRoute: ApiPublicHooksRunMonitorsRoute,
+  ApiPublicHooksRunTaskRemindersRoute: ApiPublicHooksRunTaskRemindersRoute,
+  ApiPublicHooksRunWorkflowJobsRoute: ApiPublicHooksRunWorkflowJobsRoute,
+  ApiPublicTwilioSmsInboundRoute: ApiPublicTwilioSmsInboundRoute,
+  ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
+  ApiPublicWebhooksInboundSmsRoute: ApiPublicWebhooksInboundSmsRoute,
+  ApiPublicWebhooksWhopRoute: ApiPublicWebhooksWhopRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
+  ApiPublicDialerSmsInboundProviderRoute:
+    ApiPublicDialerSmsInboundProviderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
