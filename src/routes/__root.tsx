@@ -8,6 +8,7 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
 import { SubdomainBrandBoot } from "@/components/SubdomainBrandBoot";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
 function NotFoundComponent() {
   return (
@@ -82,6 +83,7 @@ function RootComponent() {
       <ThemeProvider>
         <AuthProvider>
           <SubdomainBrandBoot />
+          <AnalyticsTracker />
           <Outlet />
           <Toaster richColors position="bottom-right" closeButton />
         </AuthProvider>
