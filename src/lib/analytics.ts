@@ -41,7 +41,7 @@ export async function track(event: string, props: Record<string, unknown> = {}) 
     const { user_id, team_id } = await currentContext();
     await supabase.from("analytics_events").insert({
       event,
-      props,
+      props: props as never,
       path: window.location.pathname + window.location.search,
       referrer: document.referrer || null,
       user_agent: navigator.userAgent,
