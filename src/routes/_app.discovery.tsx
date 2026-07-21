@@ -16,6 +16,8 @@ import { ResultsMap } from "@/components/discovery/ResultsMap";
 import { ProgressActivityLog } from "@/components/discovery/ProgressActivityLog";
 import { KeywordAutocomplete } from "@/components/discovery/KeywordAutocomplete";
 import { LocationAutocomplete } from "@/components/discovery/LocationAutocomplete";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 import { toast } from "sonner";
 import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
