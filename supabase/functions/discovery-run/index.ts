@@ -1,0 +1,1642 @@
+// deno-lint-ignore-file no-explicit-any
+// R4D Phase 2 — Discovery Engine orchestrator
+// Runs the full 6-step pipeline for a given search_id, streaming progress
+// via search_steps updates (Realtime broadcasts them to the UI).
+// Sources without configured API keys are marked failed for that step and skipped.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  scrapeYelpGlobal,
+  scrapeYellowPagesGlobal,
+  scrapeAngiGlobal,
+  scrapeBBBGlobal,
+  scrapeBiggerPocketsGlobal,
+  scrapeCraigslistGlobal,
+  scrapeRedditGlobal,
+} from "./scrapers/firecrawl-global.ts";
+import { scrapeOpenStreetMap } from "./scrapers/osm-global.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_KEY") ?? Deno.env.get("GOOGLE_MAPS_SERVER_KEY") ?? "AIzaSyDcJPuyi_jAkpGYzPCXhBcpCtaHuKmriAI";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+type StepName = "business" | "decisionmakers" | "social" | "skiptrace" | "verify" | "score" | "finalize";
+
+interface Business {
+  name: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  website?: string;
+  domain?: string;
+  industry?: string;
+  phone?: string;
+  rating?: number;
+  review_count?: number;
+  employee_count?: number;
+  founded_year?: number;
+  description?: string;
+  services?: string[];
+  sources: string[];
+  raw: Record<string, any>;
+  // decision maker
+  contact_name?: string;
+  contact_title?: string;
+  emails_found?: { email: string; source: string }[];
+  phones_found?: { phone: string; source: string; type?: string }[];
+  linkedin_url?: string;
+  instagram_url?: string;
+  facebook_url?: string;
+  twitter_url?: string;
+  youtube_url?: string;
+}
+
+// ─── Social profile lookup (Serper) ───────────────────────────────────────────
+const SOCIAL_PLATFORMS = [
+  { key: "facebook_url" as const, site: "facebook.com", hostRx: /(^|\.)facebook\.com$/i },
+  { key: "instagram_url" as const, site: "instagram.com", hostRx: /(^|\.)instagram\.com$/i },
+  { key: "twitter_url" as const, site: "twitter.com OR site:x.com", hostRx: /(^|\.)(twitter|x)\.com$/i },
+  { key: "youtube_url" as const, site: "youtube.com", hostRx: /(^|\.)youtube\.com$/i },
+];
+
+async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Promise<string | null> {
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 5000);
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ q: query, num: 5 }),
+      signal: ctl.signal,
+    });
+    clearTimeout(to);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const organic = (data.organic || []) as { link?: string }[];
+    for (const o of organic) {
+      if (!o.link) continue;
+      try {
+        const h = new URL(o.link).hostname;
+        if (hostRx.test(h)) return o.link;
+      } catch { /* ignore */ }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function enrichSocials(
+  fullName: string | undefined,
+  company: string | undefined,
+  serperKey: string | undefined,
+): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
+  if (!serperKey || !fullName) return {};
+  const q = `"${fullName}"${company ? ` "${company}"` : ""}`;
+  const results = await Promise.allSettled(
+    SOCIAL_PLATFORMS.map((p) =>
+      serperTopUrl(`site:${p.site} ${q}`, serperKey, p.hostRx).then((url) => ({ key: p.key, url })),
+    ),
+  );
+  const out: Record<string, string> = {};
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value.url) out[r.value.key] = r.value.url;
+  }
+  return out;
+}
+
+function normCompany(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+}
+
+function mergeBusinesses(items: Business[]): Business[] {
+  const map = new Map<string, Business>();
+  for (const b of items) {
+    const key = `${normCompany(b.name)}|${(b.city || "").toLowerCase()}`;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, b);
+    } else {
+      // merge fields
+      existing.sources = Array.from(new Set([...existing.sources, ...b.sources]));
+      existing.website ||= b.website;
+      existing.domain ||= b.domain;
+      existing.phone ||= b.phone;
+      existing.address ||= b.address;
+      existing.lat ??= b.lat;
+      existing.lng ??= b.lng;
+      existing.industry ||= b.industry;
+      existing.rating ||= b.rating;
+      existing.review_count ||= b.review_count;
+      existing.employee_count ||= b.employee_count;
+      existing.founded_year ||= b.founded_year;
+      existing.description ||= b.description;
+      existing.contact_name ||= b.contact_name;
+      existing.contact_title ||= b.contact_title;
+      existing.linkedin_url ||= b.linkedin_url;
+      existing.instagram_url ||= b.instagram_url;
+      existing.facebook_url ||= b.facebook_url;
+      existing.services = Array.from(new Set([...(existing.services || []), ...(b.services || [])]));
+      existing.emails_found = [...(existing.emails_found || []), ...(b.emails_found || [])];
+      existing.phones_found = [...(existing.phones_found || []), ...(b.phones_found || [])];
+      existing.raw = { ...existing.raw, ...b.raw };
+    }
+  }
+  return Array.from(map.values());
+}
+
+// ─── Geocode a free-form business address to lat/lng for the Areas map. ──
+// Returns null on failure so callers can fall back to other coords.
+async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: number; lng: number } | null> {
+  if (!address || !apiKey) return null;
+  try {
+    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+    url.searchParams.set("address", address);
+    url.searchParams.set("key", apiKey);
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const data = await res.json();
+    const loc = data?.results?.[0]?.geometry?.location;
+    if (typeof loc?.lat === "number" && typeof loc?.lng === "number") {
+      return { lat: loc.lat, lng: loc.lng };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePhone(p: string | null | undefined): string | null {
+  if (!p) return null;
+  const digits = String(p).replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : null;
+}
+
+// ─── USA + Canada gate ──────────────────────────────────────────────────────
+// Discovery is restricted to North America. We accept common spellings of
+// US/Canada and the 50 US states + 13 Canadian provinces/territories. If a
+// search comes in for any other region, the pipeline aborts cleanly with a
+// user-facing message instead of running degraded queries.
+const US_STATES = new Set([
+  "alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware","florida",
+  "georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine",
+  "maryland","massachusetts","michigan","minnesota","mississippi","missouri","montana","nebraska",
+  "nevada","new hampshire","new jersey","new mexico","new york","north carolina","north dakota",
+  "ohio","oklahoma","oregon","pennsylvania","rhode island","south carolina","south dakota",
+  "tennessee","texas","utah","vermont","virginia","washington","west virginia","wisconsin","wyoming",
+  "district of columbia","dc","puerto rico",
+  "al","ak","az","ar","ca","co","ct","de","fl","ga","hi","id","il","in","ia","ks","ky","la","me","md",
+  "ma","mi","mn","ms","mo","mt","ne","nv","nh","nj","nm","ny","nc","nd","oh","ok","or","pa","ri","sc",
+  "sd","tn","tx","ut","vt","va","wa","wv","wi","wy","pr",
+]);
+const CA_PROVINCES = new Set([
+  "ontario","quebec","british columbia","alberta","manitoba","saskatchewan","nova scotia",
+  "new brunswick","newfoundland and labrador","prince edward island","yukon","northwest territories","nunavut",
+  "on","qc","bc","ab","mb","sk","ns","nb","nl","pe","yt","nt","nu",
+]);
+const US_TOKENS = new Set(["usa","us","u.s.","u.s.a.","united states","united states of america","america"]);
+const CA_TOKENS = new Set(["canada","ca","can"]);
+
+function resolveCountry(location: string): "USA" | "Canada" | null {
+  if (!location) return "USA"; // empty location defaults to USA (matches existing UX)
+  const tokens = location.toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+  for (const t of tokens) {
+    if (US_TOKENS.has(t)) return "USA";
+    if (CA_TOKENS.has(t)) return "Canada";
+  }
+  for (const t of tokens) {
+    if (US_STATES.has(t)) return "USA";
+    if (CA_PROVINCES.has(t)) return "Canada";
+  }
+  return null;
+}
+
+// ─── Source: Google Maps Places ──────────────────────────────────────────────
+async function queryGoogleMaps(keyword: string, location: string, apiKey: string): Promise<Business[]> {
+  const key = apiKey || GOOGLE_MAPS_KEY;
+  const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+  url.searchParams.set("query", `${keyword} ${location}`);
+  url.searchParams.set("key", key);
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`gmaps ${res.status}`);
+  const data = await res.json();
+  const results = (data.results || []) as any[];
+  return results.slice(0, 60).map((r): Business => {
+    const comps = String(r.formatted_address || "").split(",").map((s) => s.trim());
+    return {
+      name: r.name,
+      address: r.formatted_address,
+      lat: r.geometry?.location?.lat,
+      lng: r.geometry?.location?.lng,
+      city: comps.length >= 3 ? comps[comps.length - 3] : location.split(",")[0]?.trim(),
+      industry: (r.types || [])[0],
+      phone: r.formatted_phone_number,
+      rating: r.rating,
+      review_count: r.user_ratings_total,
+      website: r.website,
+      sources: ["google_maps"],
+      raw: { google_maps: r },
+    };
+  });
+}
+
+// ─── Source: Apollo.io ────────────────────────────────────────────────────────
+// Two-step: People Search (credit-free) finds candidates by role,
+// then we map the orgs found from those people into Business records.
+// Per-contact enrichment (people/match) is called later for confirmed
+// decision-makers — that endpoint consumes credits.
+async function queryApollo(keyword: string, location: string, apiKey: string): Promise<Business[]> {
+  const res = await fetch("https://api.apollo.io/api/v1/mixed_people/api_search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Api-Key": apiKey, "Cache-Control": "no-cache" },
+    body: JSON.stringify({
+      q_keywords: keyword,
+      person_locations: [location],
+      person_titles: ["owner", "ceo", "founder", "co-founder", "president", "managing director", "principal"],
+      page: 1,
+      per_page: 50,
+    }),
+  });
+  if (!res.ok) throw new Error(`apollo ${res.status}`);
+  const data = await res.json();
+  const people = data.people || data.contacts || [];
+  // Group people by org so each org becomes one Business with its top decision maker pre-filled
+  const byOrg = new Map<string, any[]>();
+  for (const p of people) {
+    const orgName = p.organization?.name || p.organization_name;
+    if (!orgName) continue;
+    const k = orgName.toLowerCase();
+    if (!byOrg.has(k)) byOrg.set(k, []);
+    byOrg.get(k)!.push(p);
+  }
+  return Array.from(byOrg.values()).map((peopleAtOrg): Business => {
+    const top = peopleAtOrg[0];
+    const o = top.organization || {};
+    return {
+      name: o.name || top.organization_name,
+      city: top.city || o.city || location.split(",")[0]?.trim(),
+      state: top.state || o.state,
+      country: top.country || o.country,
+      website: o.website_url,
+      domain: o.primary_domain,
+      industry: o.industry,
+      employee_count: o.estimated_num_employees,
+      founded_year: o.founded_year,
+      description: o.short_description,
+      contact_name: [top.first_name, top.last_name].filter(Boolean).join(" ") || top.name,
+      contact_title: top.title,
+      linkedin_url: top.linkedin_url,
+      sources: ["apollo"],
+      raw: { apollo: { top, org: o, all_people: peopleAtOrg } },
+    };
+  });
+}
+
+// Per-contact enrichment (use only on confirmed decision-makers, costs credits)
+async function apolloEnrichPerson(args: {
+  firstName?: string; lastName?: string; companyName?: string; domain?: string;
+}, apiKey: string): Promise<{ email?: string; emails?: string[]; phones?: string[]; linkedin?: string } | null> {
+  const res = await fetch("https://api.apollo.io/api/v1/people/match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Api-Key": apiKey },
+    body: JSON.stringify({
+      first_name: args.firstName,
+      last_name: args.lastName,
+      organization_name: args.companyName,
+      domain: args.domain,
+      reveal_personal_emails: true,
+      reveal_phone_number: true,
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const p = data.person;
+  if (!p) return null;
+  return {
+    email: p.email,
+    emails: [p.email, ...(p.personal_emails || [])].filter(Boolean),
+    phones: (p.phone_numbers || []).map((x: any) => x.sanitized_number || x.raw_number).filter(Boolean),
+    linkedin: p.linkedin_url,
+  };
+}
+
+// ─── Source: Seamless.ai (v2 API, 60 req/min throttle) ────────────────────────
+async function querySeamless(keyword: string, location: string, apiKey: string): Promise<Business[]> {
+  const res = await fetch("https://api.seamless.ai/v2/contacts/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      keyword,
+      location,
+      titles: ["owner", "ceo", "founder", "president", "managing director"],
+      limit: 50,
+      deduplicate: true,
+    }),
+  });
+  if (!res.ok) throw new Error(`seamless ${res.status}`);
+  const data = await res.json();
+  const contacts = data.contacts || data.data || [];
+  const byOrg = new Map<string, any[]>();
+  for (const c of contacts) {
+    const orgName = c.company?.name || c.company_name;
+    if (!orgName) continue;
+    const k = orgName.toLowerCase();
+    if (!byOrg.has(k)) byOrg.set(k, []);
+    byOrg.get(k)!.push(c);
+  }
+  return Array.from(byOrg.values()).map((list): Business => {
+    const top = list[0];
+    const co = top.company || {};
+    return {
+      name: co.name || top.company_name,
+      city: co.city || location.split(",")[0]?.trim(),
+      state: co.state,
+      website: co.website,
+      domain: co.domain,
+      industry: co.industry,
+      employee_count: co.employee_count,
+      contact_name: top.name || top.full_name || [top.first_name, top.last_name].filter(Boolean).join(" ") || null,
+      contact_title: top.title,
+      linkedin_url: top.linkedin_url,
+      emails_found: top.email ? [{ email: top.email, source: "seamless" }] : [],
+      phones_found: top.phone ? [{ phone: top.phone, source: "seamless" }] : [],
+      sources: ["seamless"],
+      raw: { seamless: { top, contacts: list } },
+    };
+  });
+}
+
+
+// ─── Source: Leads Gorilla (best-effort generic shape) ────────────────────────
+async function queryLeadsGorilla(keyword: string, location: string, apiKey: string): Promise<Business[]> {
+  const res = await fetch("https://api.leadsgorilla.com/v1/businesses/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ keyword, location, limit: 50 }),
+  });
+  if (!res.ok) throw new Error(`leads_gorilla ${res.status}`);
+  const data = await res.json();
+  const list = data.businesses || data.data || [];
+  return list.map((b: any): Business => ({
+    name: b.name,
+    city: b.city || location.split(",")[0]?.trim(),
+    phone: b.phone,
+    website: b.website,
+    industry: b.category,
+    rating: b.rating,
+    sources: ["leads_gorilla"],
+    raw: { leads_gorilla: b },
+  }));
+}
+
+// ─── Source: Clay (company search) ───────────────────────────────────────────
+async function queryClay(keyword: string, location: string, apiKey: string): Promise<Business[]> {
+  const res = await fetch("https://api.clay.com/v1/companies/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ query: keyword, location, limit: 50 }),
+  });
+  if (!res.ok) throw new Error(`clay ${res.status}`);
+  const data = await res.json();
+  const list = data.companies || data.results || data.data || [];
+  return list.map((c: any): Business => ({
+    name: c.name || c.company_name,
+    city: c.city || c.location?.city || location.split(",")[0]?.trim(),
+    website: c.website || c.domain,
+    industry: Array.isArray(c.industries) ? c.industries[0] : (c.industry || c.category),
+    phone: c.phone,
+    sources: ["clay"],
+    raw: { clay: c },
+  }));
+}
+
+// ─── Source: AI Ark (AI-powered company/people search) ───────────────────────
+async function queryAIArk(keyword: string, location: string, apiKey: string, endpoint: string): Promise<Business[]> {
+  if (!endpoint) throw new Error("ai_ark endpoint not configured");
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ query: keyword, location, limit: 50 }),
+  });
+  if (!res.ok) throw new Error(`ai_ark ${res.status}`);
+  const data = await res.json();
+  const list = data.results || data.companies || data.data || data.items || [];
+  return list.map((c: any): Business => ({
+    name: c.name || c.company || c.company_name,
+    city: c.city || c.location || location.split(",")[0]?.trim(),
+    website: c.website || c.url,
+    industry: c.industry || c.category,
+    phone: c.phone,
+    emails_found: c.email ? [{ email: c.email, source: "ai_ark" }] : [],
+    sources: ["ai_ark"],
+    raw: { ai_ark: c },
+  }));
+}
+
+// ─── Source: Apify (web scraping actor) ──────────────────────────────────────
+async function queryApify(keyword: string, location: string, apiKey: string, actorId: string): Promise<Business[]> {
+  if (!actorId) throw new Error("apify actor_id not configured");
+  // Run actor synchronously and wait for dataset items
+  const runRes = await fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ search: keyword, query: keyword, location, maxItems: 50 }),
+  });
+  if (!runRes.ok) throw new Error(`apify ${runRes.status}`);
+  const list = await runRes.json();
+  if (!Array.isArray(list)) return [];
+  return list.map((c: any): Business => ({
+    name: c.name || c.title || c.businessName || c.company,
+    city: c.city || c.address?.city || location.split(",")[0]?.trim(),
+    website: c.website || c.url || c.domain,
+    phone: c.phone || c.phoneNumber,
+    industry: c.category || c.industry,
+    emails_found: c.email ? [{ email: c.email, source: "apify" }] : [],
+    sources: ["apify"],
+    raw: { apify: c },
+  }));
+}
+
+// ─── Source: Firecrawl (free web scraping) ───────────────────────────────────
+const DIRECTORY_SITES_RX = /yelp|yellowpages|bbb|houzz|angi|thumbtack|bark\.com|facebook\.com|linkedin\.com|instagram\.com|twitter\.com|x\.com|reddit\.com|google\.com|bing\.com|mapquest|tripadvisor|trustpilot/i;
+
+async function queryFirecrawl(keyword: string, location: string, apiKey: string): Promise<Business[]> {
+  const query = location
+    ? `${keyword} businesses in ${location} contact website`
+    : `${keyword} businesses contact website`;
+  const res = await fetch("https://api.firecrawl.dev/v1/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({ query, limit: 10 }),
+  });
+  if (!res.ok) throw new Error(`firecrawl ${res.status}`);
+  const data = await res.json();
+  if (!data.success) throw new Error(`firecrawl: ${(data as any).error || "unknown"}`);
+  const results: Business[] = [];
+  for (const item of (data.data || [])) {
+    const url = item.url as string;
+    if (!url) continue;
+    try {
+      const domain = new URL(url).hostname.replace(/^www\./, "");
+      if (DIRECTORY_SITES_RX.test(domain)) continue;
+      const title = (item.metadata?.title || "") as string;
+      const desc = (item.metadata?.description || "") as string;
+      const name = title.split(/[|\-–—]/)[0]?.trim() || domain.split(".")[0];
+      if (!name || name.length < 2) continue;
+      results.push({
+        name,
+        website: url,
+        domain,
+        description: desc || undefined,
+        city: location ? location.split(",")[0]?.trim() : undefined,
+        sources: ["firecrawl"],
+        raw: { firecrawl: item },
+      });
+    } catch { /* skip malformed URLs */ }
+  }
+  return results;
+}
+
+// ─── Hunter.io free email discovery ──────────────────────────────────────────
+async function hunterDomainSearch(domain: string, apiKey: string): Promise<{ email: string; first_name?: string; last_name?: string; position?: string }[]> {
+  try {
+    const params = new URLSearchParams({ domain, api_key: apiKey, limit: "10" });
+    const res = await fetch(`https://api.hunter.io/v2/domain-search?${params}`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return ((data.data?.emails || []) as any[])
+      .filter((e: any) => (e.confidence || 0) >= 50)
+      .map((e: any) => ({
+        email: e.value as string,
+        first_name: e.first_name as string | undefined,
+        last_name: e.last_name as string | undefined,
+        position: e.position as string | undefined,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+async function hunterEmailFinder(firstName: string, lastName: string, domain: string, apiKey: string): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({ domain, first_name: firstName, last_name: lastName, api_key: apiKey });
+    const res = await fetch(`https://api.hunter.io/v2/email-finder?${params}`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const email = data.data?.email as string | undefined;
+    const score = (data.data?.score || 0) as number;
+    return email && score >= 40 ? email : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── FREE decision-maker hunt via Serper (LinkedIn / BiggerPockets / FB / web)
+async function serperFreeDmHunt(
+  companyName: string,
+  location: string | null,
+  serperKey: string,
+): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
+  const queries = [
+    `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President)`,
+    `site:biggerpockets.com "${companyName}"`,
+    `site:facebook.com "${companyName}" owner`,
+    `"${companyName}" CEO OR owner OR founder${location ? ` ${location}` : ""}`,
+  ];
+  const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
+  for (const q of queries) {
+    try {
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q, num: 5 }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const organic = (data.organic || []) as any[];
+      for (const r of organic) {
+        const blob = `${r.title || ""} ${r.snippet || ""}`;
+        const roleMatch = blob.match(ROLE_RX);
+        if (!roleMatch) continue;
+        // LinkedIn URL: title looks like "John Doe - CEO - Acme | LinkedIn"
+        const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
+        const candidateName = titleParts[0] || "";
+        // Validate it looks like a real name: at least 2 words, not all numbers, reasonable length
+        // Relaxed from strict capitalization — handles TJ Smith, José García, Jr. suffixes etc.
+        const words = candidateName.trim().split(/\s+/);
+        if (words.length < 2 || words.length > 5) continue;
+        if (candidateName.length < 4 || candidateName.length > 60) continue;
+        if (/^[\d\W]+$/.test(candidateName)) continue; // all non-letter
+        if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue; // starts with article
+        const source = (r.link || "").includes("linkedin.com") ? "linkedin"
+          : (r.link || "").includes("biggerpockets.com") ? "biggerpockets"
+          : (r.link || "").includes("facebook.com") ? "facebook"
+          : "google";
+        return {
+          name: candidateName,
+          title: roleMatch[0],
+          source,
+          linkedin_url: source === "linkedin" ? r.link : undefined,
+        };
+      }
+    } catch { /* try next query */ }
+  }
+  return null;
+}
+
+// ─── FREE skip-trace via open-web search (Serper + Firecrawl) ────────────────
+// Instead of scraping CAPTCHA-protected people-search sites (TruePeopleSearch,
+// ThatsThem, CyberBackgroundChecks), we Google-search the person's name +
+// company across the entire open internet, then scrape the top results and
+// extract phone numbers & emails from those pages. Also scrapes the company's
+// own website contact/about pages as a high-value free source.
+const GLOBAL_PHONE_RX =
+  /(?:(?:\+|00)\d{1,3}[\s.\-]?)?(?:\(\d{1,4}\)[\s.\-]?)?\d{2,4}(?:[\s.\-]?\d{2,4}){1,4}/g;
+
+function normalizePhoneToken(raw: string): string | null {
+  const hadPlus = /^\s*(?:\+|00)/.test(raw);
+  let digits = raw.replace(/\D/g, "");
+  if (hadPlus && digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.length < 7 || digits.length > 15) return null;
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  return `+${digits}`;
+}
+
+function extractPhones(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of text.matchAll(GLOBAL_PHONE_RX)) {
+    const norm = normalizePhoneToken(m[0]);
+    if (norm) out.add(norm);
+  }
+  return Array.from(out);
+}
+
+async function freeSkiptraceViaWeb(
+  args: { name: string; company?: string; city?: string | null; state?: string | null; website?: string | null },
+  serperKey: string,
+  firecrawlKey: string | null,
+  deadlineMs?: number,
+): Promise<{ phones: string[]; emails: string[]; sources: string[] }> {
+  const overBudget = () => typeof deadlineMs === "number" && Date.now() > deadlineMs;
+  const EMAIL_RX2 = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+  const JUNK_EMAIL_RX = /example\.com|sentry|wixpress|cloudflare|domain\.com|sentry\.io|googleapis|schema\.org|w3\.org|placeholder|noreply|no-reply|mailer-daemon/i;
+  const JUNK_DOMAIN_RX = /facebook\.com|linkedin\.com|instagram\.com|twitter\.com|x\.com|youtube\.com|google\.com|bing\.com|yahoo\.com|reddit\.com|wikipedia\.org|github\.com|pinterest\.com|tiktok\.com|apple\.com|microsoft\.com|amazon\.com/i;
+
+  const allPhones = new Set<string>();
+  const allEmails = new Set<string>();
+  const okSources: string[] = [];
+
+  const loc = [args.city, args.state].filter(Boolean).join(", ");
+
+  // ─── Strategy 1: Google search the person's name + company via Serper ──
+  const queries = [
+    `"${args.name}" "${args.company || ""}" phone email contact`,
+    `"${args.name}" ${args.company || ""} ${loc} phone OR email OR contact`,
+    `"${args.name}" ${loc} phone number email address`,
+  ].filter(q => q.trim().length > 10);
+
+  for (const q of queries) {
+    if (overBudget()) break;
+    try {
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q, num: 10 }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      // Extract from snippets directly (Google often shows phone/email in snippets)
+      for (const r of (data.organic || []) as any[]) {
+        const blob = `${r.title || ""} ${r.snippet || ""}`;
+        for (const ph of extractPhones(blob)) allPhones.add(ph);
+        for (const m of blob.matchAll(EMAIL_RX2)) {
+          const email = m[0].toLowerCase();
+          if (!JUNK_EMAIL_RX.test(email)) {
+            try {
+              const emailDomain = email.split("@")[1];
+              if (!JUNK_DOMAIN_RX.test(emailDomain)) allEmails.add(email);
+            } catch { /* skip */ }
+          }
+        }
+      }
+
+      // Also check the knowledge graph / answer box
+      const kgBlob = JSON.stringify(data.knowledgeGraph || data.answerBox || {});
+      for (const ph of extractPhones(kgBlob)) allPhones.add(ph);
+      for (const m of kgBlob.matchAll(EMAIL_RX2)) {
+        const email = m[0].toLowerCase();
+        if (!JUNK_EMAIL_RX.test(email)) {
+          try {
+            const emailDomain = email.split("@")[1];
+            if (!JUNK_DOMAIN_RX.test(emailDomain)) allEmails.add(email);
+          } catch { /* skip */ }
+        }
+      }
+
+      if (allPhones.size > 0 || allEmails.size > 0) {
+        if (!okSources.includes("serper_web")) okSources.push("serper_web");
+      }
+
+      // ─── Scrape top non-social results with Firecrawl ──
+      if (firecrawlKey) {
+        const urlsToScrape: string[] = [];
+        for (const r of (data.organic || []) as any[]) {
+          if (!r.link) continue;
+          try {
+            const host = new URL(r.link).hostname.toLowerCase();
+            if (JUNK_DOMAIN_RX.test(host)) continue;
+            // Skip people-search sites that need CAPTCHA
+            if (/truepeoplesearch|thatsthem|cyberbackgroundchecks|spokeo|whitepages|beenverified|intelius|peoplefinder|fastpeoplesearch|zabasearch/i.test(host)) continue;
+            urlsToScrape.push(r.link);
+          } catch { /* skip */ }
+        }
+        // Scrape top 2 results max to stay fast
+        for (const pageUrl of urlsToScrape.slice(0, 2)) {
+          if (overBudget()) break;
+          try {
+            const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${firecrawlKey}` },
+              body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true, waitFor: 1500, timeout: 8000 }),
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!scrapeRes.ok) continue;
+            const scrapeData = await scrapeRes.json();
+            const md: string = scrapeData?.data?.markdown || "";
+            if (!md || md.length < 50) continue;
+            for (const ph of extractPhones(md)) allPhones.add(ph);
+            for (const m of md.matchAll(EMAIL_RX2)) {
+              const email = m[0].toLowerCase();
+              if (!JUNK_EMAIL_RX.test(email)) {
+                try {
+                  const emailDomain = email.split("@")[1];
+                  if (!JUNK_DOMAIN_RX.test(emailDomain)) allEmails.add(email);
+                } catch { /* skip */ }
+              }
+            }
+            if (!okSources.includes("firecrawl_web")) okSources.push("firecrawl_web");
+          } catch { /* skip page */ }
+        }
+      }
+
+      // If we already found good data, stop searching
+      if (allPhones.size >= 2 || allEmails.size >= 2) break;
+    } catch { /* try next query */ }
+  }
+
+  // ─── Strategy 2: Scrape the company's own website contact/about page ──
+  if (firecrawlKey && args.website) {
+    const baseUrl = args.website.startsWith("http") ? args.website : `https://${args.website}`;
+    const contactPages = [
+      baseUrl,
+      `${baseUrl.replace(/\/+$/, "")}/contact`,
+      `${baseUrl.replace(/\/+$/, "")}/about`,
+      `${baseUrl.replace(/\/+$/, "")}/contact-us`,
+      `${baseUrl.replace(/\/+$/, "")}/about-us`,
+    ];
+    for (const pageUrl of contactPages) {
+      if (overBudget()) break;
+      try {
+        const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${firecrawlKey}` },
+          body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true, waitFor: 1500, timeout: 8000 }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!scrapeRes.ok) continue;
+        const scrapeData = await scrapeRes.json();
+        const md: string = scrapeData?.data?.markdown || "";
+        if (!md || md.length < 30) continue;
+        for (const ph of extractPhones(md)) allPhones.add(ph);
+        for (const m of md.matchAll(EMAIL_RX2)) {
+          const email = m[0].toLowerCase();
+          if (!JUNK_EMAIL_RX.test(email)) {
+            try {
+              const emailDomain = email.split("@")[1];
+              if (!JUNK_DOMAIN_RX.test(emailDomain)) allEmails.add(email);
+            } catch { /* skip */ }
+          }
+        }
+        if (!okSources.includes("company_website")) okSources.push("company_website");
+        // If we found data from the company site, that's high quality — stop
+        if (allPhones.size > 0 || allEmails.size > 0) break;
+      } catch { /* try next page */ }
+    }
+  }
+
+  return {
+    phones: Array.from(allPhones).slice(0, 5),
+    emails: Array.from(allEmails).slice(0, 5),
+    sources: okSources,
+  };
+}
+
+// ─── Lusha paid enrichment (fallback after Hunter) ────────────────────────────
+async function lushaEnrichPerson(
+  args: { firstName?: string; lastName?: string; company?: string },
+  apiKey: string,
+): Promise<{ emails: string[]; phones: string[] } | null> {
+  try {
+    const params = new URLSearchParams();
+    if (args.firstName) params.set("firstName", args.firstName);
+    if (args.lastName) params.set("lastName", args.lastName);
+    if (args.company) params.set("company", args.company);
+    const res = await fetch(`https://api.lusha.co/person?${params}`, {
+      headers: { "api_key": apiKey },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const emails = ((data.emailAddresses || []) as any[])
+      .map((e: any) => (typeof e === "string" ? e : e.emailAddress))
+      .filter(Boolean) as string[];
+    const phones = ((data.phoneNumbers || []) as any[])
+      .map((p: any) => (typeof p === "string" ? p : (p.internationalNumber || p.localNumber)))
+      .filter(Boolean) as string[];
+    return { emails, phones };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Email validation: syntax + MX (DNS-over-HTTPS) ──────────────────────────
+const EMAIL_RX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+async function checkMx(domain: string): Promise<boolean> {
+  try {
+    const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${domain}&type=MX`, {
+      headers: { accept: "application/dns-json" },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return Array.isArray(j.Answer) && j.Answer.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function generatePatterns(firstName: string, lastName: string, domain: string): string[] {
+  const f = firstName.toLowerCase();
+  const l = lastName.toLowerCase();
+  const fi = f[0] || "";
+  const li = l[0] || "";
+  return [
+    `${f}@${domain}`,
+    `${f}.${l}@${domain}`,
+    `${fi}.${l}@${domain}`,
+    `${fi}${l}@${domain}`,
+    `${l}@${domain}`,
+    `${f}_${l}@${domain}`,
+    `info@${domain}`,
+    `owner@${domain}`,
+    `ceo@${domain}`,
+    `contact@${domain}`,
+  ];
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const SUPABASE = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+
+// ─── Paid-API credit probes ───────────────────────────────────────────────────
+// Returns remaining balance for each provider. -1 = unknown / probe failed (we still try).
+// 0 = quota exhausted — skip all calls.
+async function probeHunterCredits(key: string): Promise<number> {
+  try {
+    const r = await fetch(`https://api.hunter.io/v2/account?api_key=${key}`);
+    if (!r.ok) return -1;
+    const j = await r.json();
+    const used = j?.data?.requests?.searches?.used ?? 0;
+    const avail = j?.data?.requests?.searches?.available ?? 0;
+    return Math.max(0, avail - used);
+  } catch { return -1; }
+}
+async function probeApolloCredits(key: string): Promise<number> {
+  try {
+    const r = await fetch("https://api.apollo.io/v1/auth/health", {
+      headers: { "Cache-Control": "no-cache", "Content-Type": "application/json", "X-Api-Key": key },
+    });
+    if (r.status === 401 || r.status === 403) return 0; // bad key
+    if (!r.ok) return -1;
+    return -1; // Apollo doesn't expose credits cleanly here; assume unknown
+  } catch { return -1; }
+}
+async function probeLushaCredits(key: string): Promise<number> {
+  try {
+    const r = await fetch("https://api.lusha.com/credits", { headers: { api_key: key } });
+    if (r.status === 401 || r.status === 403) return 0;
+    if (!r.ok) return -1;
+    const j = await r.json();
+    return typeof j?.credits === "number" ? j.credits : -1;
+  } catch { return -1; }
+}
+async function recordCreditSnapshot(teamId: string, provider: string, balance: number, error?: string) {
+  try {
+    await SUPABASE.from("api_credit_snapshots").insert({
+      team_id: teamId,
+      provider,
+      balance: balance < 0 ? null : balance,
+      balance_unit: "credits",
+      error: error || null,
+      raw: {},
+    });
+  } catch { /* swallow */ }
+}
+
+async function upsertStep(searchId: string, teamId: string, step: StepName, patch: Record<string, any>) {
+  const { data: existing } = await SUPABASE
+    .from("search_steps")
+    .select("id")
+    .eq("search_id", searchId)
+    .eq("step", step)
+    .maybeSingle();
+  if (existing) {
+    await SUPABASE.from("search_steps").update(patch).eq("id", existing.id);
+  } else {
+    await SUPABASE.from("search_steps").insert({ search_id: searchId, team_id: teamId, step, ...patch });
+  }
+}
+
+async function setStepRunning(searchId: string, teamId: string, step: StepName, sub?: string) {
+  await upsertStep(searchId, teamId, step, { status: "running", sub_status: sub ?? null, started_at: new Date().toISOString() });
+}
+async function setStepDone(searchId: string, teamId: string, step: StepName, detail: any, success: string[], failed: string[]) {
+  await upsertStep(searchId, teamId, step, {
+    status: failed.length && !success.length ? "failed" : "complete",
+    sub_status: null,
+    detail,
+    sources_success: success,
+    sources_failed: failed,
+    completed_at: new Date().toISOString(),
+  });
+}
+
+async function logActivity(
+  searchId: string,
+  teamId: string,
+  step: string,
+  status: "info" | "running" | "success" | "error",
+  icon: string,
+  message: string,
+  opts?: { count?: number; percent?: number },
+) {
+  try {
+    await SUPABASE.from("search_activity").insert({
+      search_id: searchId,
+      team_id: teamId,
+      step,
+      status,
+      icon,
+      message,
+      count: opts?.count ?? null,
+      percent: opts?.percent ?? null,
+    });
+  } catch (e) {
+    console.error("logActivity failed", e);
+  }
+}
+
+function scoreContact(b: Business, verifiedEmail: boolean, patternVerified: boolean, verifiedPhone: boolean): number {
+  let s = 0;
+  if (verifiedEmail) s += 25;
+  if (patternVerified && !verifiedEmail) s += 15;
+  if (verifiedPhone) s += 25;
+  if (b.linkedin_url) s += 15;
+  if (b.instagram_url) s += 5;
+  if (b.facebook_url) s += 5;
+  if (b.employee_count) s += 5;
+  if (b.rating) s += 3;
+  if ((b.sources || []).length >= 2) s += 5;
+  if (b.description) s += 2;
+  if (b.founded_year) s += 3;
+  if (b.services && b.services.length) s += 2;
+  return Math.min(100, s);
+}
+
+// ─── Main handler ─────────────────────────────────────────────────────────────
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const { search_id } = await req.json();
+    if (!search_id) return new Response("missing search_id", { status: 400, headers: corsHeaders });
+
+    const { data: search } = await SUPABASE.from("searches").select("team_id").eq("id", search_id).maybeSingle();
+    if (!search) return new Response("not found", { status: 404, headers: corsHeaders });
+
+    // Run in background so the HTTP caller returns immediately
+    const work = runPipeline(search_id);
+    // @ts-ignore EdgeRuntime is provided by Supabase
+    if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any).waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(work);
+    } else {
+      // best-effort: don't await
+      work.catch((e) => console.error("pipeline error", e));
+    }
+
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "content-type": "application/json" } });
+  } catch (e) {
+    console.error(e);
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, "content-type": "application/json" } });
+  }
+});
+
+async function runPipeline(searchId: string) {
+  const t0 = Date.now();
+  const { data: search } = await SUPABASE.from("searches").select("*").eq("id", searchId).single();
+  if (!search) return;
+  const teamId = search.team_id as string;
+
+  await SUPABASE.from("searches").update({ status: "running" }).eq("id", searchId);
+  await logActivity(searchId, teamId, "start", "info", "🚀", `Pipeline starting for "${search.keyword}"…`, { percent: 1 });
+
+  const { data: settings } = await SUPABASE.from("team_settings").select("*").eq("team_id", teamId).maybeSingle();
+
+  const sources_success: Record<string, boolean> = {};
+  const sources_failed: Record<string, string> = {};
+
+  try {
+    const keyword = search.keyword as string;
+    const location = (search.location as string) || "";
+
+    // ── USA + Canada gate: bail out cleanly for unsupported regions ─────────
+    const country = resolveCountry(location);
+    if (!country) {
+      await SUPABASE.from("searches").update({
+        status: "failed",
+        error_text: "Discovery currently supports USA and Canada only. Please enter a US state/city or Canadian province/city.",
+        completed_at: new Date().toISOString(),
+      }).eq("id", searchId);
+      await logActivity(searchId, teamId, "business", "error", "🌎",
+        "Discovery is limited to USA and Canada. Update the location and try again.",
+        { percent: 100 });
+      return;
+    }
+    // overwrite countryHint downstream so scrapers stay in-region
+    const countryHint = country;
+
+    async function checkCancelled(): Promise<boolean> {
+      const { data } = await SUPABASE.from("searches").select("status").eq("id", searchId).single();
+      return data?.status === "cancelled";
+    }
+
+    if (await checkCancelled()) return;
+
+    // ── STEP 1: business discovery (parallel, USA/Canada only) ─────────────
+    await setStepRunning(searchId, teamId, "business", `Scraping ${country} directories`);
+    await logActivity(searchId, teamId, "business", "running", "🌎",
+      `Scraping Google Maps, Reddit, Yelp, Yellow Pages, Angi, BBB, BiggerPockets, Craigslist (${country})…`,
+      { percent: 10 });
+
+    const isRealEstate = /cash buyer|wholesale|investor|investment|property|real estate/i.test(keyword);
+    const isLocalBiz = /cleaning|roofing|hvac|plumb|contractor|landscap|pest|electric|service/i.test(keyword);
+
+    const tasks: Promise<{ name: string; items: Business[] }>[] = [];
+    const wrap = (name: string, p: Promise<Business[]>) =>
+      p.then(items => ({ name, items }))
+       .catch((e) => {
+         console.error(`${name} failed`, e);
+         sources_failed[name] = String(e);
+         return { name, items: [] as Business[] };
+       });
+
+    // Always-on free sources
+    tasks.push(wrap("google_maps", queryGoogleMaps(keyword, location, settings?.google_maps_key || GOOGLE_MAPS_KEY)));
+
+    // OpenStreetMap (Overpass) — free, keyless. Returns exact address + coords.
+    tasks.push(wrap("openstreetmap", scrapeOpenStreetMap(keyword, location, countryHint)));
+
+    const defaultSubs = (settings?.default_subreddits as string[] | undefined) ?? [];
+    const subreddits = defaultSubs.length > 0
+      ? defaultSubs
+      : (isRealEstate
+          ? ["Wholesaling", "RealEstate", "realestateinvesting", "cashbuyers"]
+          : ["smallbusiness", "Entrepreneur"]);
+    tasks.push(wrap("reddit", scrapeRedditGlobal(keyword, subreddits, countryHint)));
+
+    // Firecrawl-powered global scrapers (cheap, only if key is configured)
+    const firecrawlKey = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY");
+    if (firecrawlKey) {
+      if (isRealEstate) {
+        tasks.push(wrap("biggerpockets", scrapeBiggerPocketsGlobal(keyword, location, firecrawlKey)));
+        tasks.push(wrap("craigslist", scrapeCraigslistGlobal(keyword, location, firecrawlKey)));
+      }
+      if (isLocalBiz || !isRealEstate) {
+        tasks.push(wrap("yelp", scrapeYelpGlobal(keyword, location, firecrawlKey)));
+        tasks.push(wrap("yellow_pages", scrapeYellowPagesGlobal(keyword, location, firecrawlKey)));
+        tasks.push(wrap("angi", scrapeAngiGlobal(keyword, location, firecrawlKey)));
+        tasks.push(wrap("bbb", scrapeBBBGlobal(keyword, location, firecrawlKey)));
+      }
+    } else {
+      sources_failed["firecrawl"] = "no api key configured";
+    }
+
+    // Paid backup sources (Apollo, Seamless, etc.)
+    const apolloKeyEnv = (settings?.apollo_key as string | undefined) || Deno.env.get("APOLLO_API_KEY");
+    if (apolloKeyEnv) tasks.push(wrap("apollo", queryApollo(keyword, location, apolloKeyEnv)));
+    else sources_failed["apollo"] = "no api key configured";
+    if (settings?.seamless_key) tasks.push(wrap("seamless", querySeamless(keyword, location, settings.seamless_key)));
+    else sources_failed["seamless"] = "no api key configured";
+    if (settings?.leads_gorilla_key) tasks.push(wrap("leads_gorilla", queryLeadsGorilla(keyword, location, settings.leads_gorilla_key)));
+    else sources_failed["leads_gorilla"] = "no api key configured";
+    if (settings?.clay_key) tasks.push(wrap("clay", queryClay(keyword, location, settings.clay_key)));
+    else sources_failed["clay"] = "no api key configured";
+    if (settings?.ai_ark_key) tasks.push(wrap("ai_ark", queryAIArk(keyword, location, settings.ai_ark_key, settings.ai_ark_endpoint || "")));
+    else sources_failed["ai_ark"] = "no api key configured";
+    const apifyKeyEnv = (settings?.apify_key as string | undefined) || Deno.env.get("APIFY_API_KEY");
+    const apifyActorId = (settings?.apify_actor_id as string | undefined) || Deno.env.get("APIFY_ACTOR_ID") || "compass~google-maps-extractor";
+    if (apifyKeyEnv) tasks.push(wrap("apify", queryApify(keyword, location, apifyKeyEnv, apifyActorId)));
+    else sources_failed["apify"] = "no api key configured";
+
+    if (tasks.length === 0) {
+      await logActivity(searchId, teamId, "business", "error", "⚠️",
+        "No API keys configured. Add at least one source in Settings → APIs to get results.",
+        { percent: 25 });
+    }
+
+    const ok: string[] = [];
+    const fail: string[] = Object.keys(sources_failed);
+    let all: Business[] = [];
+    const settled = await Promise.allSettled(tasks);
+    for (const r of settled) {
+      if (r.status === "fulfilled") {
+        if (r.value.items.length > 0 || !sources_failed[r.value.name]) {
+          ok.push(r.value.name);
+          sources_success[r.value.name] = true;
+          // remove from failed list if it succeeded
+          if (!sources_failed[r.value.name]) {
+            const idx = fail.indexOf(r.value.name);
+            if (idx >= 0) fail.splice(idx, 1);
+          }
+        }
+        all = all.concat(r.value.items);
+      }
+    }
+    const merged = mergeBusinesses(all);
+
+    // Geocode any merged businesses that have an address but no lat/lng yet,
+    // so each lead pins on the Areas map at its real street location.
+    const mapsKeyForGeocode = (settings?.google_maps_key as string | undefined) || GOOGLE_MAPS_KEY;
+    if (mapsKeyForGeocode) {
+      const needGeo = merged.filter(b => b.address && (typeof b.lat !== "number" || typeof b.lng !== "number"));
+      const BATCH = 5;
+      for (let i = 0; i < needGeo.length; i += BATCH) {
+        const slice = needGeo.slice(i, i + BATCH);
+        await Promise.allSettled(slice.map(async (b) => {
+          const coords = await geocodeAddress(b.address!, mapsKeyForGeocode);
+          if (coords) { b.lat = coords.lat; b.lng = coords.lng; }
+        }));
+      }
+    }
+
+    await SUPABASE.from("searches").update({ businesses_found: merged.length, sources_success, sources_failed }).eq("id", searchId);
+    await setStepDone(searchId, teamId, "business", { count: merged.length }, ok, fail);
+    await logActivity(searchId, teamId, "business", merged.length > 0 ? "success" : "error", "🔗",
+      `Found ${merged.length} businesses from ${ok.length} source(s)${fail.length ? `, ${fail.length} failed` : ""}`,
+      { count: merged.length, percent: 25 });
+
+    if (await checkCancelled()) return;
+
+    // ── STEP 2: decision-maker extraction + business intel ───────────────
+    await setStepRunning(searchId, teamId, "decisionmakers", "Filtering owners/CEOs");
+    const titleFilter = (search.title_filters as string[]) || [];
+    const titleParts = titleFilter.length > 0
+      ? titleFilter.map(t => t.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"))
+      : [];
+    const baseRoles = ["owner", "founder", "chief", "president", "managing director", "principal", "partner"];
+    const dmRegexParts = [...titleParts, ...baseRoles];
+    const dmRegex = new RegExp(`\\b(${dmRegexParts.join("|")})\\b`, "i");
+    const blockRegex = /\b(receptionist|assistant|coordinator|secretary|front desk|customer service|support|intern)\b/i;
+
+    let dmCount = 0;
+    for (const b of merged) {
+      // BUG FIX: Apollo stores top contact as raw.apollo.top (not primary_contact/contacts[])
+      // BUG FIX: Seamless stores top contact as raw.seamless.top (not seamless.contacts[0])
+      const apolloPerson = b.raw?.apollo?.top;
+      const seamlessPerson = b.raw?.seamless?.top;
+      const cand = apolloPerson || seamlessPerson;
+      if (cand) {
+        const title = (cand.title || "") as string;
+        // If title passes the DM filter, set this as our contact — also accept if no title filter set
+        if ((titleFilter.length === 0 || dmRegex.test(title)) && !blockRegex.test(title)) {
+          b.contact_name = cand.name || `${cand.first_name || ""} ${cand.last_name || ""}`.trim();
+          b.contact_title = title || null;
+          // Pull any email/phone Apollo already returned (free, no credit cost)
+          const apolloEmail = cand.email;
+          const apolloPhones: string[] = (cand.phone_numbers || []).map((x: any) => x.sanitized_number || x.raw_number).filter(Boolean);
+          if (apolloEmail) b.emails_found = [...(b.emails_found || []), { email: apolloEmail, source: "apollo" }];
+          if (apolloPhones.length > 0) b.phones_found = [...(b.phones_found || []), ...apolloPhones.map((p: string) => ({ phone: p, source: "apollo", type: "direct" as const }))];
+          // Seamless direct fields
+          const seamlessEmail = seamlessPerson?.email;
+          const seamlessPhone = seamlessPerson?.phone;
+          if (!apolloEmail && seamlessEmail) b.emails_found = [...(b.emails_found || []), { email: seamlessEmail, source: "seamless" }];
+          if (!apolloPhones.length && seamlessPhone) b.phones_found = [...(b.phones_found || []), { phone: seamlessPhone, source: "seamless", type: "direct" as const }];
+        }
+      }
+      if (b.contact_name) dmCount++;
+    }
+
+    // FREE DM hunt: for any business still missing a contact, hit Serper (LinkedIn/BiggerPockets/FB/web) BEFORE any paid call
+    const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    let freeDmFound = 0;
+    if (serperKeyForDm) {
+      const missing = merged.filter(b => !b.contact_name);
+      const BATCH_DM = 4;
+      for (let i = 0; i < missing.length; i += BATCH_DM) {
+        const slice = missing.slice(i, i + BATCH_DM);
+        await Promise.allSettled(slice.map(async (b) => {
+          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm);
+          if (dm) {
+            b.contact_name = dm.name;
+            b.contact_title = dm.title;
+            if (dm.linkedin_url) b.linkedin_url ||= dm.linkedin_url;
+            b.sources = Array.from(new Set([...(b.sources || []), `free_dm_${dm.source}`]));
+            freeDmFound++;
+            dmCount++;
+          }
+        }));
+      }
+    }
+    await SUPABASE.from("searches").update({ decision_makers_found: dmCount }).eq("id", searchId);
+    await setStepDone(searchId, teamId, "decisionmakers", { count: dmCount, free_dm_found: freeDmFound }, ["filter", ...(freeDmFound > 0 ? ["serper_free"] : [])], []);
+    await logActivity(searchId, teamId, "decisionmakers", "success", "👤",
+      `Identified ${dmCount} decision-makers${freeDmFound > 0 ? ` (${freeDmFound} via free LinkedIn/BiggerPockets/FB hunt)` : ""}`,
+      { count: dmCount, percent: 40 });
+
+    // ── STEP 3: social profile discovery (best-effort) ───────────────────
+    if (await checkCancelled()) return;
+    await setStepRunning(searchId, teamId, "social", "Finding social profiles");
+    let socialCount = 0;
+    // BUG FIX: Apollo LinkedIn URL is stored at raw.apollo.top.linkedin_url
+    for (const b of merged) {
+      const lnk = b.raw?.apollo?.top?.linkedin_url;
+      if (lnk) b.linkedin_url ||= lnk;
+    }
+    // Serper lookups for other socials (parallel across businesses, capped batch size)
+    const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    if (serperKey) {
+      const BATCH = 5;
+      for (let i = 0; i < merged.length; i += BATCH) {
+        const slice = merged.slice(i, i + BATCH);
+        await Promise.allSettled(slice.map(async (b) => {
+          const socials = await enrichSocials(b.contact_name, b.name, serperKey);
+          if (socials.facebook_url) b.facebook_url ||= socials.facebook_url;
+          if (socials.instagram_url) b.instagram_url ||= socials.instagram_url;
+          if (socials.twitter_url) b.twitter_url ||= socials.twitter_url;
+          if (socials.youtube_url) b.youtube_url ||= socials.youtube_url;
+        }));
+      }
+    }
+    for (const b of merged) {
+      if (b.linkedin_url || b.facebook_url || b.instagram_url || b.twitter_url || b.youtube_url) socialCount++;
+    }
+    const socialOk = ["linkedin"];
+    const socialFail: string[] = [];
+    if (serperKey) socialOk.push("serper"); else socialFail.push("serper");
+    await setStepDone(searchId, teamId, "social", { count: socialCount }, socialOk, socialFail);
+    await logActivity(searchId, teamId, "social", "success", "🌐", `Found social profiles for ${socialCount} contacts`, { count: socialCount, percent: 55 });
+
+    // ── STEP 4: FREE skip-trace (Serper web search + Firecrawl scraping + Hunter) ──
+    if (await checkCancelled()) return;
+    await setStepRunning(searchId, teamId, "skiptrace", "Free web search + company site scraping + Hunter");
+    await logActivity(searchId, teamId, "skiptrace", "running", "🔎",
+      "Searching the open internet for contact info (Google search + website scraping + Hunter)…", { percent: 60 });
+    const stOk: string[] = [];
+    const stFail: string[] = [];
+
+    const hunterKey = (settings?.hunter_api_key as string | undefined) || Deno.env.get("HUNTER_API_KEY");
+    const serperKeySkip = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    const firecrawlKeyEnrich = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY");
+
+    // Safe-spend guard: probe Hunter balance
+    const credits: Record<string, number> = {};
+    if (hunterKey) { credits.hunter = await probeHunterCredits(hunterKey); await recordCreditSnapshot(teamId, "hunter", credits.hunter); }
+
+    // Global skiptrace time budget — caps the entire step so 100-row searches
+    // can't hang the pipeline. Per-business budget is derived from this.
+    const SKIPTRACE_TOTAL_MS = 240_000; // 4 minutes total
+    const PER_BUSINESS_MS = 12_000;     // 12s max per business
+    const skiptraceStartedAt = Date.now();
+    const skiptraceDeadline = skiptraceStartedAt + SKIPTRACE_TOTAL_MS;
+    let skiptraceSkipped = 0;
+    let skiptraceErrors = 0;
+
+    const SKIP_BATCH = 3;
+    outer: for (let i = 0; i < merged.length; i += SKIP_BATCH) {
+      if (Date.now() > skiptraceDeadline) {
+        skiptraceSkipped += merged.length - i;
+        break outer;
+      }
+      const batch = merged.slice(i, i + SKIP_BATCH);
+      await Promise.allSettled(batch.map(async (b) => {
+        try {
+          // Skip if BOTH email AND phone are already found
+          if ((b.emails_found && b.emails_found.length > 0) && (b.phones_found && b.phones_found.length > 0)) return;
+          if (Date.now() > skiptraceDeadline) { skiptraceSkipped++; return; }
+
+          const nameParts = (b.contact_name || "").split(" ");
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+          const domain = b.domain || (b.website
+            ? (() => { try { return new URL(b.website!.startsWith("http") ? b.website! : `https://${b.website}`).hostname.replace(/^www\./, ""); } catch { return null; } })()
+            : null);
+
+          const perBizDeadline = Math.min(skiptraceDeadline, Date.now() + PER_BUSINESS_MS);
+
+          // ⓪ FREE: Open-web search (Serper + Firecrawl) — bounded by deadline
+          if (serperKeySkip && b.contact_name && Date.now() < perBizDeadline) {
+            try {
+              const webResult = await freeSkiptraceViaWeb(
+                { name: b.contact_name, company: b.name, city: b.city, state: b.state, website: b.website },
+                serperKeySkip,
+                firecrawlKeyEnrich || null,
+                perBizDeadline,
+              );
+              if (webResult.phones.length > 0) {
+                b.phones_found = [...(b.phones_found || []), ...webResult.phones.map(p => ({ phone: p, source: "web_search", type: "direct" as const }))];
+              }
+              if (webResult.emails.length > 0) {
+                b.emails_found = [...(b.emails_found || []), ...webResult.emails.map(e => ({ email: e, source: "web_search" }))];
+              }
+              for (const src of webResult.sources) {
+                if (!stOk.includes(src)) stOk.push(src);
+              }
+            } catch (e) {
+              skiptraceErrors++;
+              console.error("skiptrace web error", b.name, String(e).slice(0, 200));
+            }
+          }
+
+          // ① Free: Hunter domain search (only if we still need emails)
+          if (!(b.emails_found && b.emails_found.length > 0) && hunterKey && domain && Date.now() < perBizDeadline) {
+            try {
+              const hunterEmails = await hunterDomainSearch(domain, hunterKey);
+              if (hunterEmails.length > 0) {
+                const dm = hunterEmails.find(e => e.position && /owner|ceo|founder|president|director|chief/i.test(e.position))
+                  || hunterEmails[0];
+                b.emails_found = [...(b.emails_found || []), { email: dm.email, source: "hunter" }];
+                if (dm.first_name && dm.last_name && !b.contact_name) {
+                  b.contact_name = `${dm.first_name} ${dm.last_name}`.trim();
+                  b.contact_title = dm.position || b.contact_title;
+                }
+                if (!stOk.includes("hunter")) stOk.push("hunter");
+              } else if (firstName && lastName) {
+                const found = await hunterEmailFinder(firstName, lastName, domain, hunterKey);
+                if (found) {
+                  b.emails_found = [...(b.emails_found || []), { email: found, source: "hunter" }];
+                  if (!stOk.includes("hunter")) stOk.push("hunter");
+                }
+              }
+            } catch (e) {
+              skiptraceErrors++;
+              console.error("skiptrace hunter error", b.name, String(e).slice(0, 200));
+            }
+          }
+        } catch (e) {
+          // Catch-all so one bad business never breaks the whole skiptrace step
+          skiptraceErrors++;
+          console.error("skiptrace per-business error", b.name, String(e).slice(0, 200));
+        }
+      }));
+    }
+
+    if (!hunterKey) stFail.push("hunter");
+    if (!serperKeySkip) stFail.push("serper");
+    if (skiptraceSkipped > 0) {
+      await logActivity(searchId, teamId, "skiptrace", "info", "⏱️",
+        `Skip-trace time budget reached — ${skiptraceSkipped} business(es) saved without extra enrichment.`,
+        { count: skiptraceSkipped });
+    }
+    if (skiptraceErrors > 0) {
+      await logActivity(searchId, teamId, "skiptrace", "info", "⚠️",
+        `${skiptraceErrors} skip-trace lookups failed and were skipped (search continues).`,
+        { count: skiptraceErrors });
+    }
+
+    let phonesFound = 0;
+    let emailsFound = 0;
+    for (const b of merged) {
+      phonesFound += (b.phones_found || []).length;
+      emailsFound += (b.emails_found || []).length;
+    }
+    await setStepDone(searchId, teamId, "skiptrace", { phones: phonesFound, emails: emailsFound }, stOk, stFail);
+    await logActivity(searchId, teamId, "skiptrace", stOk.length ? "success" : "info", "☎️",
+      `Enrichment found ${emailsFound} emails and ${phonesFound} phones`, { percent: 65 });
+
+    // ── STEP 5: verification (MX + pattern — no bounced emails) ──────────
+    if (await checkCancelled()) return;
+    await setStepRunning(searchId, teamId, "verify", "Verifying emails + phones");
+    await logActivity(searchId, teamId, "verify", "running", "📧", "Verifying emails via MX check — bounced addresses removed…", { percent: 75 });
+    let verifiedEmails = 0;
+    let patternVerified = 0;
+    let verifiedPhones = 0;
+
+    for (const b of merged) {
+      const domain = b.domain || (b.website ? (() => { try { return new URL(b.website!.startsWith("http") ? b.website! : `https://${b.website}`).hostname.replace(/^www\./, ""); } catch { return null; } })() : null);
+
+      // MX-verify each known email; remove those that fail (no bounces)
+      const verifiedList: typeof b.emails_found = [];
+      for (const e of b.emails_found || []) {
+        if (!EMAIL_RX.test(e.email)) continue;
+        const mxOk = await checkMx(e.email.split("@")[1]);
+        if (mxOk) {
+          verifiedEmails++;
+          (e as any).verified = true;
+          (e as any).mx_valid = true;
+          verifiedList.push(e);
+        }
+        // Emails that fail MX are silently dropped — no bounced emails
+      }
+      b.emails_found = verifiedList;
+
+      // Pattern-generate when we have name + domain but still no verified email
+      if (b.contact_name && domain && b.emails_found.length === 0) {
+        const [first, ...rest] = b.contact_name.split(" ");
+        const last = rest.pop() || "";
+        if (first && last) {
+          const mxOk = await checkMx(domain);
+          if (mxOk) {
+            const patterns = generatePatterns(first, last, domain);
+            b.emails_found = patterns.map(p => ({ email: p, source: "pattern" }));
+            patternVerified += patterns.length;
+          }
+        }
+      }
+
+      // Phone verification: ≥2 sources = verified
+      for (const p of b.phones_found || []) {
+        if (((p as any).sources?.length || 1) >= 2) verifiedPhones++;
+      }
+    }
+    await SUPABASE.from("searches").update({
+      verified_emails: verifiedEmails,
+      pattern_verified_emails: patternVerified,
+      verified_phones: verifiedPhones,
+    }).eq("id", searchId);
+    await setStepDone(searchId, teamId, "verify", { verifiedEmails, patternVerified, verifiedPhones }, ["smtp"], []);
+    await logActivity(searchId, teamId, "verify", "success", "✅", `Verified ${verifiedEmails} emails, ${verifiedPhones} phones`, { percent: 85 });
+
+    // ── STEP 6: score + auto-pipeline + persist ──────────────────────────
+    if (await checkCancelled()) return;
+    await setStepRunning(searchId, teamId, "score", "Scoring + auto-adding to pipeline");
+    await logActivity(searchId, teamId, "score", "running", "🎯", "Scoring leads and persisting contacts…", { percent: 92 });
+    const threshold = (settings?.auto_pipeline_threshold as number) ?? 70;
+    const { data: newLeadStage } = await SUPABASE
+      .from("pipeline_stages").select("id").eq("team_id", teamId).eq("position", 0).maybeSingle();
+
+    let autoAdded = 0;
+    let totalScore = 0;
+    let scoredCount = 0;
+    const duplicatesFound: Array<{ name: string; reason: string; existing_contact_id: string }> = [];
+
+    for (const b of merged) {
+     try {
+      const primaryEmail = b.emails_found?.[0]?.email || null;
+      const primaryPhone = b.phones_found?.[0]?.phone || b.phone || null;
+      const phoneDigits = normalizePhone(primaryPhone);
+
+      // Duplicate detection: skip (don't save) if the team already has this
+      // business by company name, primary email, or primary phone (normalized).
+      // The auto-purge cron clears discovery contacts after 90 days, so the
+      // same business becomes scrapeable again then.
+      const orFilters: string[] = [];
+      const safeName = b.name.replace(/[,()]/g, "");
+      orFilters.push(`company.ilike.${safeName}`);
+      if (primaryEmail) orFilters.push(`email.eq.${primaryEmail}`);
+      if (phoneDigits) orFilters.push(`phone.ilike.%${phoneDigits}%`);
+
+      const { data: dupRows } = await SUPABASE
+        .from("contacts")
+        .select("id, company, email, phone")
+        .eq("team_id", teamId)
+        .or(orFilters.join(","))
+        .limit(1);
+      const existingContact = dupRows?.[0] || null;
+
+      if (existingContact) {
+        const reason = existingContact.email && primaryEmail && existingContact.email === primaryEmail
+          ? "same email"
+          : existingContact.phone && phoneDigits && normalizePhone(existingContact.phone) === phoneDigits
+          ? "same phone"
+          : "same company name";
+        duplicatesFound.push({ name: b.name, reason, existing_contact_id: existingContact.id });
+        // Record on search_results so the UI can still show what was scraped,
+        // but tagged as a duplicate (no new contact created/updated).
+        await SUPABASE.from("search_results").insert({
+          search_id: searchId, team_id: teamId, contact_id: existingContact.id,
+          is_new: false, auto_added_to_pipeline: false,
+          raw_sources_data: { ...b.raw, _duplicate_reason: reason },
+        });
+        continue;
+      }
+
+      let contactId: string | undefined;
+      let isNew = false;
+
+      const verifiedEmail = !!(b.emails_found?.[0] as any)?.verified;
+      const patternEmail = b.emails_found?.[0]?.source === "pattern";
+      const verifiedPhoneAny = ((b.phones_found || []).length >= 2);
+      const score = scoreContact(b, verifiedEmail, patternEmail, verifiedPhoneAny);
+      totalScore += score;
+      scoredCount++;
+
+      const contactRow: Record<string, unknown> = {
+        team_id: teamId,
+        name: b.contact_name || b.name,
+        title: b.contact_title || null,
+        company: b.name,
+        email: primaryEmail,
+        phone: primaryPhone,
+        linkedin_url: b.linkedin_url || null,
+        instagram_url: b.instagram_url || null,
+        facebook_url: b.facebook_url || null,
+        twitter_url: b.twitter_url || null,
+        youtube_url: b.youtube_url || null,
+        industry: b.industry || null,
+        address: b.address || null,
+        city: b.city || null,
+        state: b.state || null,
+        country: b.country || null,
+        email_verified: verifiedEmail,
+        phone_verified: verifiedPhoneAny,
+        verification_sources: b.sources,
+        lead_score: score,
+        source: "discovery",
+        discovery_keyword: keyword,
+        notes: b.description || null,
+        auto_added_by_discovery: true,
+        last_activity_at: new Date().toISOString(),
+        // 90-day retention for discovery leads — cron purges untouched rows
+        auto_purge_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      if (typeof b.lat === "number" && typeof b.lng === "number") {
+        contactRow.lat = b.lat;
+        contactRow.lng = b.lng;
+        contactRow.geocoded_at = new Date().toISOString();
+      }
+
+      const { data: ins, error } = await SUPABASE.from("contacts").insert(contactRow).select("id").single();
+      if (error) { console.error("contact insert error", error); continue; }
+      contactId = ins.id;
+      isNew = true;
+
+      // persist business intel
+      if (b.description || b.employee_count || b.founded_year || b.rating) {
+        await SUPABASE.from("business_intel").upsert({
+          team_id: teamId, contact_id: contactId,
+          description: b.description, employee_count: b.employee_count,
+          founded_year: b.founded_year,
+          years_in_business: b.founded_year ? new Date().getFullYear() - b.founded_year : null,
+          services: b.services || [],
+          google_rating: b.rating || null,
+          google_review_count: b.review_count || null,
+          industry_tags: b.industry ? [b.industry] : [],
+        }, { onConflict: "contact_id" } as any);
+      }
+
+      // persist phones
+      const phoneRows = (b.phones_found || []).map((p, i) => ({
+        team_id: teamId, contact_id: contactId!,
+        phone_number: p.phone, phone_type: (p.type as any) || "unknown",
+        confidence_score: 50 + (((p as any).sources?.length || 1) * 10),
+        sources: [(p as any).source].filter(Boolean),
+        is_primary: i === 0, verified: ((p as any).sources?.length || 1) >= 2,
+      }));
+      if (phoneRows.length) await SUPABASE.from("contact_phones").insert(phoneRows);
+
+      // persist emails
+      const emailRows = (b.emails_found || []).map((e, i) => ({
+        team_id: teamId, contact_id: contactId!,
+        email: e.email,
+        source_type: e.source === "pattern" ? "pattern_generated" : "direct",
+        verified_status: (e as any).verified ? "verified" : (e.source === "pattern" ? "unverified" : "unverified"),
+        mx_valid: !!(e as any).mx_valid,
+        sources_confirmed: 1,
+        sources: [e.source],
+        is_primary: i === 0,
+      }));
+      if (emailRows.length) await SUPABASE.from("contact_emails").insert(emailRows);
+
+      // auto-pipeline - User requested all leads be added
+      let autoPipelined = false;
+      if (newLeadStage?.id) {
+        const { data: existingLead } = await SUPABASE.from("pipeline_leads")
+          .select("id").eq("team_id", teamId).eq("contact_id", contactId).maybeSingle();
+        if (!existingLead) {
+          await SUPABASE.from("pipeline_leads").insert({
+            team_id: teamId, contact_id: contactId, stage_id: newLeadStage.id,
+            notes: `Auto-added from Discovery: ${keyword}`,
+          });
+          autoAdded++;
+          autoPipelined = true;
+        }
+      }
+
+      await SUPABASE.from("search_results").insert({
+        search_id: searchId, team_id: teamId, contact_id: contactId,
+        is_new: isNew, auto_added_to_pipeline: autoPipelined,
+        raw_sources_data: b.raw,
+      });
+     } catch (perRowErr) {
+       console.error("persist row failed", b.name, String(perRowErr).slice(0, 200));
+     }
+    }
+
+    await setStepDone(searchId, teamId, "score", { autoAdded, avg: scoredCount ? totalScore / scoredCount : 0 }, ["scorer"], []);
+
+    // ── FINALIZE ─────────────────────────────────────────────────────────
+    if (await checkCancelled()) return;
+    await setStepRunning(searchId, teamId, "finalize", "Notifying");
+    const avg = scoredCount ? totalScore / scoredCount : 0;
+    const successCount = Object.keys(sources_success).length;
+    const failCount = Object.keys(sources_failed).length;
+    const finalStatus = successCount === 0 ? "failed" : failCount > 0 ? "partial" : "complete";
+    await SUPABASE.from("searches").update({
+      status: finalStatus,
+      auto_added_to_pipeline: autoAdded,
+      avg_lead_score: avg,
+      completed_at: new Date().toISOString(),
+      duration_seconds: Math.round((Date.now() - t0) / 1000),
+      duplicates: duplicatesFound,
+      duplicates_count: duplicatesFound.length,
+    }).eq("id", searchId);
+
+    const dupNote = duplicatesFound.length ? `, ${duplicatesFound.length} skipped as duplicates` : "";
+    await SUPABASE.from("notifications").insert({
+      team_id: teamId,
+      user_id: search.user_id,
+      title: `Discovery complete: ${keyword}`,
+      body: `${merged.length} businesses, ${dmCount} decision makers, ${autoAdded} auto-added to pipeline${dupNote}`,
+      type: "discovery_complete",
+      link: `/discovery?search=${searchId}`,
+    });
+
+    if (settings?.slack_webhook) {
+      try {
+        await fetch(settings.slack_webhook, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: `R4D: "${keyword}" complete — ${autoAdded} leads added to pipeline (${merged.length} found)` }),
+        });
+      } catch (_) { /* ignore */ }
+    }
+    await setStepDone(searchId, teamId, "finalize", { autoAdded }, ["notifier"], []);
+    await logActivity(searchId, teamId, "finalize", "success", "🎉",
+      `Complete! ${merged.length} leads found, ${verifiedEmails + verifiedPhones} verified, ${autoAdded} auto-added to pipeline`,
+      { count: merged.length, percent: 100 });
+  } catch (err) {
+    console.error("pipeline failed", err);
+    const msg = String(err).slice(0, 300);
+    await SUPABASE.from("searches").update({ status: "failed", error_text: msg, completed_at: new Date().toISOString() }).eq("id", searchId);
+    await logActivity(searchId, teamId, "error", "error", "❌", `Pipeline crashed: ${msg}`, { percent: 100 });
+  }
+}
