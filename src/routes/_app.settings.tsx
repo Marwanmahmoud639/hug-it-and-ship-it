@@ -67,14 +67,10 @@ function Settings() {
   const doneCount = checks.filter(c => c.ok).length;
   const progressPct = checks.length ? Math.round((doneCount / checks.length) * 100) : 0;
 
-  if (!isAdmin) {
-    return (
-      <div className="p-4 md:p-6 max-w-4xl mx-auto page-in">
-        <PageHeader title="Settings" />
-        <Card className="p-6 bg-card"><p className="text-sm text-muted-foreground">Settings are admin-only.</p></Card>
-      </div>
-    );
-  }
+  // Discovery API keys and Social keys are restricted to the assigned admin
+  // (team admin role or super admin). All other tabs remain visible so team
+  // members can send campaigns, manage notifications, pipeline, account, etc.
+  const canManageApiKeys = isAdmin || isSuperAdmin;
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto page-in">
@@ -115,8 +111,8 @@ function Settings() {
           <TabTrig value="sms" Icon={MessageSquare}>SMS</TabTrig>
           <TabTrig value="dialer" Icon={Phone}>Dialer Providers</TabTrig>
 
-          <TabTrig value="discovery" Icon={Globe}>Discovery APIs</TabTrig>
-          <TabTrig value="social" Icon={Share2}>Social</TabTrig>
+          {canManageApiKeys && <TabTrig value="discovery" Icon={Globe}>Discovery APIs</TabTrig>}
+          {canManageApiKeys && <TabTrig value="social" Icon={Share2}>Social</TabTrig>}
           <TabTrig value="ai" Icon={Sparkles}>AI</TabTrig>
           <TabTrig value="automation-apis" Icon={Webhook}>Automation APIs</TabTrig>
           <TabTrig value="notifications" Icon={Bell}>Notifications</TabTrig>
@@ -193,7 +189,7 @@ function Settings() {
 
 
 
-        <TabsContent value="discovery" className="mt-4">
+        {canManageApiKeys && <TabsContent value="discovery" className="mt-4">
           <Card className="p-6 bg-card space-y-4">
             <div className="rounded-md border border-border bg-muted/20 p-4">
               <h3 className="font-semibold mb-3 text-sm">Scraping Sources (FREE & Global)</h3>
@@ -290,9 +286,9 @@ function Settings() {
               </label>
             </div>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="social" className="mt-4">
+        {canManageApiKeys && <TabsContent value="social" className="mt-4">
           <Card className="p-6 bg-card space-y-5">
             <div>
               <h3 className="font-semibold text-sm mb-3">LinkedIn</h3>
@@ -328,7 +324,7 @@ function Settings() {
               </div>
             </div>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="automation-apis" className="mt-4 space-y-4">
           <ApiKeysPanel settings={settings} save={save} />

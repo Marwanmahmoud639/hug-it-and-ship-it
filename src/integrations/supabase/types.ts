@@ -3928,6 +3928,7 @@ export type Database = {
           contact_limit: number
           created_at: string
           custom_domain: string | null
+          discovery_monthly_limit: number
           foundation_owner_id: string | null
           id: string
           name: string
@@ -3945,6 +3946,7 @@ export type Database = {
           contact_limit?: number
           created_at?: string
           custom_domain?: string | null
+          discovery_monthly_limit?: number
           foundation_owner_id?: string | null
           id?: string
           name: string
@@ -3962,6 +3964,7 @@ export type Database = {
           contact_limit?: number
           created_at?: string
           custom_domain?: string | null
+          discovery_monthly_limit?: number
           foundation_owner_id?: string | null
           id?: string
           name?: string
@@ -4380,6 +4383,7 @@ export type Database = {
           contact_limit: number
           created_at: string
           custom_domain: string | null
+          discovery_monthly_limit: number
           foundation_owner_id: string | null
           id: string
           name: string
@@ -4447,6 +4451,7 @@ export type Database = {
           contact_limit: number
           created_at: string
           custom_domain: string | null
+          discovery_monthly_limit: number
           foundation_owner_id: string | null
           id: string
           name: string
