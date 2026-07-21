@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiscoveryCapBanner } from "@/components/app-shell/discovery-cap-banner";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/discovery")({
   component: () => (
