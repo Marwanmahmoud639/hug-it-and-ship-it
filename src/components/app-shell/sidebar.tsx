@@ -28,6 +28,7 @@ const ITEMS: NavItem[] = [
   { to: "/proposals", section: "proposals",   label: "Proposals",   icon: FileText,    roles: ["admin", "manager"], agencyOnly: true, group: "core" },
   { to: "/monitors", section: "monitors",    label: "Monitors",    icon: Radar,       roles: ["admin", "manager"],          group: "core" },
   { to: "/portals", section: "portals",     label: "Portals",     icon: Share2,      roles: ["admin", "manager"],          group: "core" },
+  { to: "/ai-caller", section: "ai_caller",  label: "AI Caller",   icon: PhoneCall,   roles: ["admin", "manager", "agent"], group: "core" },
   { to: "/analytics", section: "analytics",   label: "Analytics",   icon: BarChart3,   roles: ["admin", "manager"],          group: "manage" },
   { to: "/team", section: "team",        label: "Team",        icon: UsersRound,  roles: ["admin"],                     group: "manage" },
   { to: "/agency", label: "Agency",      icon: Building2,   roles: [], superOnly: true,                  group: "manage" },
