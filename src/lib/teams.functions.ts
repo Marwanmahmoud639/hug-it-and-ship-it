@@ -117,6 +117,8 @@ export const createSubAccount = createServerFn({ method: "POST" })
     whiteLabelName?: string | null;
     discoveryMonthlyLimit?: number | null;
     contactLimit?: number | null;
+    seatLimit?: number | null;
+    niche?: string | null;
   }) =>
     z.object({
       name: z.string().min(1).max(120),
@@ -127,6 +129,8 @@ export const createSubAccount = createServerFn({ method: "POST" })
       whiteLabelName: z.string().max(120).nullable().optional(),
       discoveryMonthlyLimit: z.number().int().min(0).max(10_000_000).nullable().optional(),
       contactLimit: z.number().int().min(0).max(10_000_000).nullable().optional(),
+      seatLimit: z.number().int().min(1).max(1000).nullable().optional(),
+      niche: z.string().max(64).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -147,6 +151,8 @@ export const createSubAccount = createServerFn({ method: "POST" })
     if (data.whiteLabelName) patch.white_label_name = data.whiteLabelName;
     if (typeof data.discoveryMonthlyLimit === "number") patch.discovery_monthly_limit = data.discoveryMonthlyLimit;
     if (typeof data.contactLimit === "number") patch.contact_limit = data.contactLimit;
+    if (typeof data.seatLimit === "number") patch.seat_limit = data.seatLimit;
+    if (data.niche) patch.default_industry = data.niche;
     if (Object.keys(patch).length > 0) {
       await (supabaseAdmin as any).from("teams").update(patch).eq("id", teamId);
     }
