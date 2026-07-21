@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 
 const STEPS = [
-  { n: 1, title: "Pick your engine", body: "Checkout securely via Whop — card or Whop balance." },
+  { n: 1, title: "Pick your engine", body: "Secure checkout — card or balance." },
   { n: 2, title: "Claim your access", body: "You're sent to /signup. Enter the email you paid with." },
   { n: 3, title: "We approve you", body: "Manual approval — no bots. Get a one-time 6-digit code by email." },
   { n: 4, title: "Activate & launch", body: "Enter the code, set a password — sub-accounts and sequences provision in minutes." },

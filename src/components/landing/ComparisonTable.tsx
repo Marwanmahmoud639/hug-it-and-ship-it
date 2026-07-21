@@ -20,8 +20,8 @@ export function ComparisonTable() {
         <div className="min-w-[640px] rounded-2xl border border-white/10 overflow-hidden">
           <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] text-xs uppercase tracking-wider font-bold">
             <div className="p-4 text-zinc-400 bg-[#0A0A0A]">Capability</div>
-            <div className="p-4 text-center text-zinc-400 bg-[#0A0A0A]">Apollo / ZoomInfo</div>
-            <div className="p-4 text-center text-zinc-400 bg-[#0A0A0A]">LeadsGorilla / Cold-call cos.</div>
+            <div className="p-4 text-center text-zinc-400 bg-[#0A0A0A]">List resellers</div>
+            <div className="p-4 text-center text-zinc-400 bg-[#0A0A0A]">Cold-call agencies</div>
             <div className="p-4 text-center text-black r4d-bg-lime border-x-2 border-[#C6F432]">the Engine</div>
           </div>
           {ROWS.map((row, i) => (

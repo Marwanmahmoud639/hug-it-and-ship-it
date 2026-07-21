@@ -190,7 +190,7 @@ function Problem() {
       icon: Layers,
       title: "The Frankenstein Stack",
       hi: "Six tools, one VA, zero system.",
-      body: "So you stitch it together: Smartlead + Aircall + Lemlist + Phantombuster + a skip-trace tool + a VA to babysit it all. Six logins, six bills, six things that break — and a 'system' that lives in one person's head. That's not outbound. That's a part-time job you didn't apply for.",
+      body: "So you stitch it together: a sender + a dialer + an outreach tool + a scraper + a skip-trace tool + a VA to babysit it all. Six logins, six bills, six things that break — and a 'system' that lives in one person's head. That's not outbound. That's a part-time job you didn't apply for.",
     },
   ];
 
@@ -626,7 +626,7 @@ function Founder() {
           </div>
         </Reveal>
         <Reveal>
-          {/* TODO: replace with Marwan's final voice before going live */}
+          {/* Founder voice — anonymized */}
           <div className="relative rounded-2xl border border-white/10 bg-black p-8 md:p-10">
             <div className="absolute top-4 bottom-4 left-0 w-1 r4d-bg-lime rounded-r" />
             <p className="text-zinc-200 leading-relaxed text-lg pl-4">
@@ -635,8 +635,8 @@ function Founder() {
             <div className="pl-4 mt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full r4d-bg-lime flex items-center justify-center text-black font-black">M</div>
               <div>
-                <div className="text-white font-bold">— Marwan</div>
-                <div className="text-xs text-zinc-500">Founder, the Engine</div>
+                <div className="text-white font-bold">— The founder</div>
+                <div className="text-xs text-zinc-500">Founder</div>
               </div>
             </div>
           </div>
@@ -754,7 +754,7 @@ function Pricing() {
                   </div>
                   {annual && <p className="text-xs text-zinc-500 mt-1">billed annually</p>}
 
-                  {/* Pricing CTA → /pricing keeps the existing Whop flow (source of truth) */}
+                  {/* Pricing CTA → /pricing keeps the existing checkout flow (source of truth) */}
                   <Link
                     to="/pricing"
                     className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition ${
@@ -795,7 +795,7 @@ function RiskReversal() {
     <section className="py-20 md:py-24 px-6 bg-[#0A0A0A]">
       <div className="max-w-5xl mx-auto">
         <Reveal>
-          {/* TODO: Marwan — confirm exact guarantee terms before publishing */}
+          {/* Guarantee terms — confirm before publishing */}
           <div className="rounded-3xl border-2 border-[#C6F432] bg-black p-8 md:p-12 r4d-glow-lime">
             <div className="flex flex-col md:flex-row items-start gap-6">
               <div className="w-14 h-14 rounded-2xl r4d-bg-lime flex items-center justify-center shrink-0 relative">
@@ -844,7 +844,7 @@ function HowAccess() {
 
 function FAQ() {
   const items = [
-    { q: "Is this just another Apollo wrapper?", a: "No. the Engine pulls from a 5-provider waterfall for mobile and personal email — one list vendor may be one of them, but the engine is the orchestration across email, SMS, DM, cold call, and RVM, not a list resale." },
+    { q: "Is this just another list-vendor wrapper?", a: "No. the Engine pulls from a 5-provider waterfall for mobile and personal email — one may be a source we use, but the engine is the orchestration across email, SMS, DM, cold call, and RVM, not a list resale." },
     { q: "Do I need my own phone numbers and sending domains?", a: "On Starter we provision your dialer numbers and sending domains. Pro and Enterprise can BYO if you already have warmed assets." },
     { q: "How is this different from a cold-calling agency?", a: "Cold-calling agencies dial gatekeepers all day. the Engine dials decision-makers on their mobile after they've already seen your email, text, and DM — so the conversation actually starts." },
     { q: "What about TCPA / DNC compliance?", a: "Every contact is federal + state DNC scrubbed before any send, and compliance gates block non-compliant sends from leaving your workspace." },
