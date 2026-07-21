@@ -66,13 +66,14 @@ function DiscoveryPage() {
   const cancel = useServerFn(cancelSearch);
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
+  const [industry, setIndustry] = useState<string>("");
   const [titles, setTitles] = useState<string[]>(TITLES);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => start({ data: { keyword, location, titles } }),
+    mutationFn: () => start({ data: { keyword, location, industry: industry || null, titles } }),
     onSuccess: (res) => {
       setActiveSearchId(res.searchId);
       toast.success("Discovery started");
