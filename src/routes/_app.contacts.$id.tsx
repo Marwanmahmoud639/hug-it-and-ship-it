@@ -15,6 +15,7 @@ import { ContactTasks } from "@/components/contacts/contact-tasks";
 import { useCalling } from "@/components/calling/calling-provider";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyDecisionMaker } from "@/lib/verify-dm.functions";
+import { listAgents, startCall as startAiCall } from "@/lib/voice-agent.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/contacts/$id")({ component: ContactDetail });
