@@ -68,12 +68,13 @@ function DiscoveryPage() {
   const start = useServerFn(startDiscovery);
   const cancel = useServerFn(cancelSearch);
   const { team } = useAuth();
-  const teamNiche = (team as any)?.default_industry as string | undefined;
+  const teamNicheRaw = (team as any)?.default_industry as string | undefined;
+  const teamNiches = (teamNicheRaw || "").split(",").map((s) => s.trim()).filter(Boolean);
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
-  const [industry, setIndustry] = useState<string>(teamNiche || "");
+  const [industry, setIndustry] = useState<string>(teamNiches[0] || "");
   const [titles, setTitles] = useState<string[]>(TITLES);
-  useEffect(() => { if (teamNiche && !industry) setIndustry(teamNiche); }, [teamNiche]);
+  useEffect(() => { if (teamNiches[0] && !industry) setIndustry(teamNiches[0]); }, [teamNicheRaw]);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
@@ -278,7 +279,7 @@ function DiscoveryPage() {
               </SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="__any">Any industry (no filter)</SelectItem>
-                {DISCOVERY_INDUSTRIES.map((opt) => (
+                {(teamNiches.length ? DISCOVERY_INDUSTRIES.filter((o) => teamNiches.includes(o.value)) : DISCOVERY_INDUSTRIES).map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -286,7 +287,7 @@ function DiscoveryPage() {
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              Narrows results so a "real estate companies" search doesn't return tire shops or unrelated niches.
+              {teamNiches.length ? "Scoped to the niches assigned to your team." : "Narrows results so a \"real estate companies\" search doesn't return tire shops or unrelated niches."}
             </p>
           </div>
 
