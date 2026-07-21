@@ -279,7 +279,7 @@ function DiscoveryPage() {
               </SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="__any">Any industry (no filter)</SelectItem>
-                {DISCOVERY_INDUSTRIES.map((opt) => (
+                {(teamNiches.length ? DISCOVERY_INDUSTRIES.filter((o) => teamNiches.includes(o.value)) : DISCOVERY_INDUSTRIES).map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -287,7 +287,7 @@ function DiscoveryPage() {
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              Narrows results so a "real estate companies" search doesn't return tire shops or unrelated niches.
+              {teamNiches.length ? "Scoped to the niches assigned to your team." : "Narrows results so a \"real estate companies\" search doesn't return tire shops or unrelated niches."}
             </p>
           </div>
 
