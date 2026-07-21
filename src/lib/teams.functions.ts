@@ -148,7 +148,7 @@ export const createSubAccount = createServerFn({ method: "POST" })
     if (typeof data.discoveryMonthlyLimit === "number") patch.discovery_monthly_limit = data.discoveryMonthlyLimit;
     if (typeof data.contactLimit === "number") patch.contact_limit = data.contactLimit;
     if (Object.keys(patch).length > 0) {
-      await supabaseAdmin.from("teams").update(patch).eq("id", teamId);
+      await (supabaseAdmin as any).from("teams").update(patch).eq("id", teamId);
     }
 
     // Assign admin by email — invite as admin. handle_new_user picks up invited_team_id/role
