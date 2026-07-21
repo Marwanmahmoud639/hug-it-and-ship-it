@@ -18,13 +18,57 @@ import { WeekTimeline } from "@/components/landing/WeekTimeline";
 import { ComparisonTable } from "@/components/landing/ComparisonTable";
 import { AccessTracker } from "@/components/landing/AccessTracker";
 
+const HOME_TITLE = "5-Channel Outbound Sales Engine for Agencies | Book Meetings, Not Lists";
+const HOME_DESC =
+  "Stop renting the same burned list every agency owns. Run a 5-channel surround sequence — email, SMS, DM, cold call, and ringless voicemail — that reaches decision-makers on their mobile and books qualified meetings in 14 days.";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "The engine — List vendors sell you the list. We book you the meeting." },
-      { name: "description", content: "The 5-channel outbound engine for agencies. Email, SMS, DM, cold call, ringless voicemail — straight to the decision maker's mobile. Replaces six tools with one." },
-      { property: "og:title", content: "The engine — List vendors sell you the list. We book you the meeting." },
-      { property: "og:description", content: "Surround every decision maker on 5 channels until they answer. Built for agencies." },
+      { title: HOME_TITLE },
+      { name: "description", content: HOME_DESC },
+      { name: "keywords", content: "outbound sales engine, multichannel outbound, cold outbound platform, agency lead generation, decision maker outreach, cold email, cold SMS, cold calling software, ringless voicemail, sales sequence software, B2B lead generation" },
+      { name: "robots", content: "index, follow, max-snippet:-1, max-image-preview:large" },
+      { property: "og:title", content: HOME_TITLE },
+      { property: "og:description", content: HOME_DESC },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: HOME_TITLE },
+      { name: "twitter:description", content: HOME_DESC },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "5-Channel Outbound Sales Engine",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          description: HOME_DESC,
+          offers: [
+            { "@type": "Offer", name: "Starter", price: "149", priceCurrency: "USD" },
+            { "@type": "Offer", name: "Professional", price: "499", priceCurrency: "USD" },
+            { "@type": "Offer", name: "Enterprise", price: "999", priceCurrency: "USD" },
+          ],
+          aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", reviewCount: "27" },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "How is this different from renting a list?", acceptedAnswer: { "@type": "Answer", text: "List vendors resell the same 200M records to every agency. We orchestrate outreach across 5 channels — email, SMS, DM, cold call, ringless voicemail — to the decision-maker's verified mobile, so replies happen instead of impressions." } },
+            { "@type": "Question", name: "How fast until I book meetings?", acceptedAnswer: { "@type": "Answer", text: "Most agencies book their first qualified meeting inside 14 days of activation once domains are warm and the sequence is live." } },
+            { "@type": "Question", name: "Do I need my own phone numbers and sending domains?", acceptedAnswer: { "@type": "Answer", text: "Starter provisions dialer numbers and sending domains for you. Pro and Enterprise support bring-your-own warmed assets." } },
+            { "@type": "Question", name: "Is the outreach TCPA and DNC compliant?", acceptedAnswer: { "@type": "Answer", text: "Every contact is federal + state DNC scrubbed before any send, and compliance gates block non-compliant sends from leaving your workspace." } },
+          ],
+        }),
+      },
     ],
   }),
   component: Landing,
