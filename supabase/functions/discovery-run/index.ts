@@ -540,6 +540,105 @@ async function hunterEmailFinder(firstName: string, lastName: string, domain: st
 }
 
 // ─── FREE decision-maker hunt via Serper (LinkedIn / BiggerPockets / FB / web)
+// ─── Free web search (no API key) ────────────────────────────────────────────
+// Unified search that prefers Serper (if key present), else DuckDuckGo HTML,
+// else scrapes Google SERP directly. Returns a normalized organic array.
+type WebResult = { title: string; snippet: string; link: string };
+async function webSearch(
+  q: string,
+  opts: { serperKey?: string | null; num?: number; timeoutMs?: number } = {},
+): Promise<{ organic: WebResult[]; source: "serper" | "duckduckgo" | "google" | "none" }> {
+  const num = opts.num ?? 8;
+  const timeoutMs = opts.timeoutMs ?? 6000;
+
+  // 1) Serper (paid, best signal)
+  if (opts.serperKey) {
+    try {
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": opts.serperKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q, num }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const organic = ((data.organic || []) as any[]).map((r) => ({
+          title: r.title || "", snippet: r.snippet || "", link: r.link || "",
+        }));
+        // Fold in knowledge graph / answer box text as a synthetic result so
+        // downstream regex extractors can pull phones/emails out of it.
+        const kg = data.knowledgeGraph || data.answerBox;
+        if (kg) organic.push({ title: kg.title || "", snippet: JSON.stringify(kg), link: kg.website || "" });
+        if (organic.length) return { organic, source: "serper" };
+      }
+    } catch { /* fall through */ }
+  }
+
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+  // 2) DuckDuckGo HTML (free, no key)
+  try {
+    const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": UA, "Accept": "text/html,application/xhtml+xml" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const results: WebResult[] = [];
+      // DDG HTML result blocks
+      const rx = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+      let m: RegExpExecArray | null;
+      while ((m = rx.exec(html)) !== null && results.length < num) {
+        let link = m[1];
+        // DDG wraps links: /l/?uddg=<encoded>
+        const uddg = link.match(/[?&]uddg=([^&]+)/);
+        if (uddg) { try { link = decodeURIComponent(uddg[1]); } catch { /* keep */ } }
+        const title = m[2].replace(/<[^>]+>/g, "").trim();
+        const snippet = m[3].replace(/<[^>]+>/g, "").trim();
+        if (link.startsWith("http")) results.push({ title, snippet, link });
+      }
+      if (results.length) return { organic: results, source: "duckduckgo" };
+    }
+  } catch { /* fall through */ }
+
+  // 3) Google HTML SERP (last resort, matches the example URL the user gave)
+  try {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(q)}&num=${num}&hl=en&pws=0`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const results: WebResult[] = [];
+      // Parse Google result blocks. Two common shapes covered.
+      // Shape 1: <a href="/url?q=<real>&...">...<h3>Title</h3>...</a>
+      const rx = /<a href="\/url\?q=([^&"]+)[^"]*"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<\/a>([\s\S]{0,600}?)(?=<a href="\/url\?q=|<\/div><\/div>)/g;
+      let m: RegExpExecArray | null;
+      while ((m = rx.exec(html)) !== null && results.length < num) {
+        let link = m[1];
+        try { link = decodeURIComponent(link); } catch { /* keep */ }
+        if (!link.startsWith("http")) continue;
+        if (/google\.com|gstatic\.com|googleusercontent\.com/.test(link)) continue;
+        const title = m[2].replace(/<[^>]+>/g, "").trim();
+        const snippetHtml = m[3];
+        // Snippet lives in a div right after the anchor
+        const snipMatch = snippetHtml.match(/<div[^>]*>([\s\S]*?)<\/div>/);
+        const snippet = (snipMatch ? snipMatch[1] : snippetHtml).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400);
+        results.push({ title, snippet, link });
+      }
+      if (results.length) return { organic: results, source: "google" };
+    }
+  } catch { /* fall through */ }
+
+  return { organic: [], source: "none" };
+}
+
 async function serperFreeDmHunt(
   companyName: string,
   location: string | null,
