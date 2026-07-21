@@ -264,6 +264,26 @@ function DiscoveryPage() {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Industry</Label>
+            <Select value={industry || "__any"} onValueChange={(v) => setIndustry(v === "__any" ? "" : v)}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Any industry" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="__any">Any industry (no filter)</SelectItem>
+                {DISCOVERY_INDUSTRIES.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Narrows results so a "real estate companies" search doesn't return tire shops or unrelated niches.
+            </p>
+          </div>
+
 
           <div>
             <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground">Target Decision Makers</Label>
