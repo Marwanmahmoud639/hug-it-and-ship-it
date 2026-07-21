@@ -65,12 +65,14 @@ function AgencyPage() {
           secondary: secondary || null,
           whiteLabelName: whiteLabelName.trim() || null,
           discoveryMonthlyLimit: Number.isFinite(monthlyRecords) ? Math.max(0, Math.floor(monthlyRecords)) : null,
+          seatLimit: Number.isFinite(seats) ? Math.max(1, Math.floor(seats)) : null,
+          niche: niche || null,
         },
       });
       if (r?.invite?.email_sent) toast.success(`Sub-account created — invite sent to ${r.invite.email}`);
       else if (r?.invite && !r.invite.email_sent) toast.success(`Sub-account created — ${r.invite.email} will get admin access on next sign-in`);
       else toast.success("Sub-account created");
-      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000);
+      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000); setSeats(1); setNiche("");
       setOpen(false);
       load();
     } catch (e: any) { toast.error(e.message ?? "Failed"); }
