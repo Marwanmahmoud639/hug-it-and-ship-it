@@ -1121,7 +1121,57 @@ async function runPipeline(searchId: string) {
         all = all.concat(r.value.items);
       }
     }
-    const merged = mergeBusinesses(all);
+    let merged = mergeBusinesses(all);
+
+    // ── Industry filter ─────────────────────────────────────────────────
+    // If the user picked an Industry preset on the Discovery form, drop
+    // merged results whose name / industry / description / services don't
+    // match. Prevents a "real estate companies" search from returning tire
+    // shops, salons, etc. Keep the regex list in sync with
+    // src/lib/discovery-industries.ts.
+    const industryFilter = (search.industry_filter as string | null) || null;
+    if (industryFilter) {
+      const INDUSTRY_RX: Record<string, RegExp> = {
+        real_estate: /(real ?estate|realtor|realty|wholesal|cash ?buyer|invest(or|ment)|property|properties|home ?buyer|we buy houses|reia|landlord|rental)/i,
+        roofing: /(roof(ing|er)?)/i,
+        hvac: /(hvac|heating|cooling|air ?condition|furnace|hvac\/r)/i,
+        plumbing: /(plumb(er|ing)|drain|sewer|water heater)/i,
+        electrical: /(electric(ian|al)?)/i,
+        landscaping: /(landscap|lawn|tree service|arborist|gardening)/i,
+        cleaning: /(clean(ing|er)?|janitor|maid|housekeep)/i,
+        pest_control: /(pest|exterminat|termite|rodent)/i,
+        construction: /(construction|contractor|builder|remodel|renovation|handyman|carpent)/i,
+        legal: /(law(yer)?|attorney|legal|law firm|counsel)/i,
+        accounting: /(accountant|accounting|cpa|bookkeep|tax\b|payroll)/i,
+        insurance: /(insurance|insur(er|ance)|broker)/i,
+        medical: /(medical|clinic|physician|doctor|dentist|dental|chiropract|therap|health)/i,
+        automotive: /(auto(motive)?|mechanic|body shop|tire|car repair|collision|dealership)/i,
+        restaurant: /(restaurant|cafe|coffee|bakery|catering|food truck|pizzeria|bar & grill|diner)/i,
+        retail: /(store|shop|boutique|retail|market\b|apparel)/i,
+        fitness: /(gym|fitness|yoga|pilates|crossfit|personal train)/i,
+        marketing: /(marketing|seo|advertising|agency|digital agency|creative agency|branding)/i,
+        it_services: /(it services|managed services|msp|computer repair|tech support|it consult|it company|software)/i,
+      };
+      const rx = INDUSTRY_RX[industryFilter];
+      if (rx) {
+        const before = merged.length;
+        merged = merged.filter((b) => {
+          const hay = [
+            b.name,
+            b.industry,
+            b.description,
+            b.contact_title,
+            ...(b.services ?? []),
+          ].filter(Boolean).join(" ");
+          return rx.test(hay);
+        });
+        await logActivity(
+          searchId, teamId, "business", "info", "🎯",
+          `Industry filter "${industryFilter}" kept ${merged.length}/${before} businesses`,
+          { percent: 20 },
+        );
+      }
+    }
 
     // Geocode any merged businesses that have an address but no lat/lng yet,
     // so each lead pins on the Areas map at its real street location.
