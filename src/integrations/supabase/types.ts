@@ -3930,6 +3930,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_login_request: { Args: { _request_id: string }; Returns: Json }
+      can_act_as_team: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
       claim_jobs: {
         Args: { _job_types?: string[]; _limit?: number }
         Returns: {
@@ -3954,6 +3959,42 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      clear_team_switch: { Args: never; Returns: undefined }
+      count_team_seats: { Args: { _team_id: string }; Returns: number }
+      create_sub_account: {
+        Args: {
+          _name: string
+          _plan?: Database["public"]["Enums"]["plan_tier"]
+        }
+        Returns: {
+          contact_limit: number
+          created_at: string
+          custom_domain: string | null
+          foundation_owner_id: string | null
+          id: string
+          name: string
+          owner_id: string
+          parent_team_id: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
+          seat_limit: number
+          subdomain: string | null
+          white_label_color: string | null
+          white_label_logo: string | null
+          white_label_name: string | null
+          white_label_secondary_color: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      deny_login_request: {
+        Args: { _reason?: string; _request_id: string }
+        Returns: Json
+      }
+      email_has_account: { Args: { _email: string }; Returns: boolean }
       get_user_team: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -3970,11 +4011,55 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_foundation_owner: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_parent_admin: {
+        Args: { _child_team_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
+      }
+      purge_expired_discovery_contacts: { Args: never; Returns: number }
+      request_login: {
+        Args: { _email: string; _ip?: string; _user_agent?: string }
+        Returns: Json
+      }
+      reserve_email_account: { Args: { p_team_id: string }; Returns: string }
+      switch_team: {
+        Args: { _team_id: string }
+        Returns: {
+          contact_limit: number
+          created_at: string
+          custom_domain: string | null
+          foundation_owner_id: string | null
+          id: string
+          name: string
+          owner_id: string
+          parent_team_id: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
+          seat_limit: number
+          subdomain: string | null
+          white_label_color: string | null
+          white_label_logo: string | null
+          white_label_name: string | null
+          white_label_secondary_color: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      transfer_foundation_owner: {
+        Args: { _new_owner_id: string; _team_id: string }
+        Returns: undefined
       }
     }
     Enums: {
