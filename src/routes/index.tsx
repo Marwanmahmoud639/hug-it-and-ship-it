@@ -675,7 +675,7 @@ function Founder() {
           <div className="relative rounded-2xl border border-white/10 bg-black p-8 md:p-10">
             <div className="absolute top-4 bottom-4 left-0 w-1 r4d-bg-lime rounded-r" />
             <p className="text-zinc-200 leading-relaxed text-lg pl-4">
-              "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. The engine is that engine."
+              "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. This is that engine."
             </p>
             <div className="pl-4 mt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full r4d-bg-lime flex items-center justify-center text-black font-black">M</div>
