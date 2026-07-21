@@ -103,7 +103,7 @@ function AiCallerPage() {
           <EmptyState
             icon={Bot}
             title="No AI callers yet"
-            description="Create your first AI voice agent — give it a script, a voice, and knowledge, then let it dial leads from your pipeline."
+            body="Create your first AI voice agent — give it a script, a voice, and knowledge, then let it dial leads from your pipeline."
             action={<Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1" /> Create AI caller</Button>}
           />
         ) : (
