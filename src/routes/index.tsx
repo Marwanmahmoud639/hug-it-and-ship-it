@@ -138,21 +138,22 @@ function Hero() {
         <div className="lg:col-span-7">
           <Reveal>
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-6">
-              The outbound engine for agencies done with Apollo
+              The problem with modern outbound
             </div>
           </Reveal>
           <Reveal delay={0.05}>
             <h1 className="font-black tracking-tight text-[40px] leading-[1.05] md:text-[72px] md:leading-[1.02] text-white mb-6">
-              List vendors sell you the list.<br />
-              We <span className="r4d-lime">book</span> you the meeting.
+              Cold outreach is broken.<br />
+              We <span className="r4d-lime">fixed</span> it.
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-10 leading-relaxed">
-              Every other agency is buying the same 200M contacts and emailing them once.
-              the engine runs a 5-channel surround sequence — email, SMS, DM, cold call, ringless voicemail —
-              straight to the decision-maker's mobile. They reply, or they block you on five things at once.
-              Either way, you stop getting ignored.
+              Every agency is renting the same burned 200M-contact list and blasting one email into the void.
+              Replies die. Meetings dry up. Retainers churn.
+              <span className="text-white"> Our 5-channel engine </span>
+              surrounds the actual decision-maker — email, SMS, DM, cold call, ringless voicemail — on their verified mobile,
+              until they reply or block you on all five. Either way, you stop being ignored.
             </p>
           </Reveal>
           <Reveal delay={0.15}>
@@ -175,7 +176,7 @@ function Hero() {
           <Reveal delay={0.2}>
             <p className="mt-6 text-xs text-zinc-500 flex items-center gap-2">
               <Shield className="w-3.5 h-3.5" />
-              Secure checkout via Whop · Manual approval keeps the platform clean · Cancel anytime.
+              Secure checkout · Manual approval keeps the platform clean · Cancel anytime.
             </p>
           </Reveal>
         </div>
