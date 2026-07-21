@@ -261,10 +261,15 @@ function AgentTab({ agent, onRefresh }: { agent: Agent; onRefresh: () => void })
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div>
           <Label>Voice</Label>
-          <Select value={voiceId} onValueChange={setVoiceId}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={voiceId} onValueChange={setVoiceId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button type="button" variant="outline" size="icon" onClick={() => previewVoice(voiceId, script)} title="Play preview">
+              <Volume2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <div>
           <Label>Status</Label>
