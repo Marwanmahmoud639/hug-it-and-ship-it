@@ -67,20 +67,9 @@ const SOCIAL_PLATFORMS = [
   { key: "youtube_url" as const, site: "youtube.com", hostRx: /(^|\.)youtube\.com$/i },
 ];
 
-async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Promise<string | null> {
+async function serperTopUrl(query: string, apiKey: string | null, hostRx: RegExp): Promise<string | null> {
   try {
-    const ctl = new AbortController();
-    const to = setTimeout(() => ctl.abort(), 5000);
-    const res = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ q: query, num: 5 }),
-      signal: ctl.signal,
-    });
-    clearTimeout(to);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const organic = (data.organic || []) as { link?: string }[];
+    const { organic } = await webSearch(query, { serperKey: apiKey, num: 5, timeoutMs: 5000 });
     for (const o of organic) {
       if (!o.link) continue;
       try {
@@ -97,13 +86,13 @@ async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Prom
 async function enrichSocials(
   fullName: string | undefined,
   company: string | undefined,
-  serperKey: string | undefined,
+  serperKey: string | null | undefined,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
-  if (!serperKey || !fullName) return {};
+  if (!fullName) return {};
   const q = `"${fullName}"${company ? ` "${company}"` : ""}`;
   const results = await Promise.allSettled(
     SOCIAL_PLATFORMS.map((p) =>
-      serperTopUrl(`site:${p.site} ${q}`, serperKey, p.hostRx).then((url) => ({ key: p.key, url })),
+      serperTopUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx).then((url) => ({ key: p.key, url })),
     ),
   );
   const out: Record<string, string> = {};
@@ -540,42 +529,133 @@ async function hunterEmailFinder(firstName: string, lastName: string, domain: st
 }
 
 // ─── FREE decision-maker hunt via Serper (LinkedIn / BiggerPockets / FB / web)
+// ─── Free web search (no API key) ────────────────────────────────────────────
+// Unified search that prefers Serper (if key present), else DuckDuckGo HTML,
+// else scrapes Google SERP directly. Returns a normalized organic array.
+type WebResult = { title: string; snippet: string; link: string };
+async function webSearch(
+  q: string,
+  opts: { serperKey?: string | null; num?: number; timeoutMs?: number } = {},
+): Promise<{ organic: WebResult[]; source: "serper" | "duckduckgo" | "google" | "none" }> {
+  const num = opts.num ?? 8;
+  const timeoutMs = opts.timeoutMs ?? 6000;
+
+  // 1) Serper (paid, best signal)
+  if (opts.serperKey) {
+    try {
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": opts.serperKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q, num }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const organic = ((data.organic || []) as any[]).map((r) => ({
+          title: r.title || "", snippet: r.snippet || "", link: r.link || "",
+        }));
+        // Fold in knowledge graph / answer box text as a synthetic result so
+        // downstream regex extractors can pull phones/emails out of it.
+        const kg = data.knowledgeGraph || data.answerBox;
+        if (kg) organic.push({ title: kg.title || "", snippet: JSON.stringify(kg), link: kg.website || "" });
+        if (organic.length) return { organic, source: "serper" };
+      }
+    } catch { /* fall through */ }
+  }
+
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+  // 2) DuckDuckGo HTML (free, no key)
+  try {
+    const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": UA, "Accept": "text/html,application/xhtml+xml" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const results: WebResult[] = [];
+      // DDG HTML result blocks
+      const rx = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+      let m: RegExpExecArray | null;
+      while ((m = rx.exec(html)) !== null && results.length < num) {
+        let link = m[1];
+        // DDG wraps links: /l/?uddg=<encoded>
+        const uddg = link.match(/[?&]uddg=([^&]+)/);
+        if (uddg) { try { link = decodeURIComponent(uddg[1]); } catch { /* keep */ } }
+        const title = m[2].replace(/<[^>]+>/g, "").trim();
+        const snippet = m[3].replace(/<[^>]+>/g, "").trim();
+        if (link.startsWith("http")) results.push({ title, snippet, link });
+      }
+      if (results.length) return { organic: results, source: "duckduckgo" };
+    }
+  } catch { /* fall through */ }
+
+  // 3) Google HTML SERP (last resort, matches the example URL the user gave)
+  try {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(q)}&num=${num}&hl=en&pws=0`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const results: WebResult[] = [];
+      // Parse Google result blocks. Two common shapes covered.
+      // Shape 1: <a href="/url?q=<real>&...">...<h3>Title</h3>...</a>
+      const rx = /<a href="\/url\?q=([^&"]+)[^"]*"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<\/a>([\s\S]{0,600}?)(?=<a href="\/url\?q=|<\/div><\/div>)/g;
+      let m: RegExpExecArray | null;
+      while ((m = rx.exec(html)) !== null && results.length < num) {
+        let link = m[1];
+        try { link = decodeURIComponent(link); } catch { /* keep */ }
+        if (!link.startsWith("http")) continue;
+        if (/google\.com|gstatic\.com|googleusercontent\.com/.test(link)) continue;
+        const title = m[2].replace(/<[^>]+>/g, "").trim();
+        const snippetHtml = m[3];
+        // Snippet lives in a div right after the anchor
+        const snipMatch = snippetHtml.match(/<div[^>]*>([\s\S]*?)<\/div>/);
+        const snippet = (snipMatch ? snipMatch[1] : snippetHtml).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400);
+        results.push({ title, snippet, link });
+      }
+      if (results.length) return { organic: results, source: "google" };
+    }
+  } catch { /* fall through */ }
+
+  return { organic: [], source: "none" };
+}
+
 async function serperFreeDmHunt(
   companyName: string,
   location: string | null,
-  serperKey: string,
+  serperKey: string | null,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
   const queries = [
     `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President)`,
     `site:biggerpockets.com "${companyName}"`,
     `site:facebook.com "${companyName}" owner`,
     `"${companyName}" CEO OR owner OR founder${location ? ` ${location}` : ""}`,
+    // Loose fallback matching user's example URL shape: name + full company
+    `${companyName}${location ? ` ${location}` : ""} owner OR founder`,
   ];
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
   for (const q of queries) {
     try {
-      const res = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, num: 5 }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const organic = (data.organic || []) as any[];
+      const { organic } = await webSearch(q, { serperKey, num: 6 });
       for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         const roleMatch = blob.match(ROLE_RX);
         if (!roleMatch) continue;
-        // LinkedIn URL: title looks like "John Doe - CEO - Acme | LinkedIn"
         const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
         const candidateName = titleParts[0] || "";
-        // Validate it looks like a real name: at least 2 words, not all numbers, reasonable length
-        // Relaxed from strict capitalization — handles TJ Smith, José García, Jr. suffixes etc.
         const words = candidateName.trim().split(/\s+/);
         if (words.length < 2 || words.length > 5) continue;
         if (candidateName.length < 4 || candidateName.length > 60) continue;
-        if (/^[\d\W]+$/.test(candidateName)) continue; // all non-letter
-        if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue; // starts with article
+        if (/^[\d\W]+$/.test(candidateName)) continue;
+        if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue;
         const source = (r.link || "").includes("linkedin.com") ? "linkedin"
           : (r.link || "").includes("biggerpockets.com") ? "biggerpockets"
           : (r.link || "").includes("facebook.com") ? "facebook"
@@ -622,7 +702,7 @@ function extractPhones(text: string): string[] {
 
 async function freeSkiptraceViaWeb(
   args: { name: string; company?: string; city?: string | null; state?: string | null; website?: string | null },
-  serperKey: string,
+  serperKey: string | null,
   firecrawlKey: string | null,
   deadlineMs?: number,
 ): Promise<{ phones: string[]; emails: string[]; sources: string[] }> {
@@ -637,27 +717,22 @@ async function freeSkiptraceViaWeb(
 
   const loc = [args.city, args.state].filter(Boolean).join(", ");
 
-  // ─── Strategy 1: Google search the person's name + company via Serper ──
+  // ─── Strategy 1: web search (Serper → DuckDuckGo → Google SERP) ─────────
   const queries = [
     `"${args.name}" "${args.company || ""}" phone email contact`,
     `"${args.name}" ${args.company || ""} ${loc} phone OR email OR contact`,
     `"${args.name}" ${loc} phone number email address`,
+    // Loose match on the raw name + company (mirrors user's example URL)
+    `${args.name} ${args.company || ""}${loc ? ` ${loc}` : ""}`,
   ].filter(q => q.trim().length > 10);
 
   for (const q of queries) {
     if (overBudget()) break;
     try {
-      const res = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, num: 10 }),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
+      const { organic, source } = await webSearch(q, { serperKey, num: 10, timeoutMs: 5000 });
+      if (!organic.length) continue;
 
-      // Extract from snippets directly (Google often shows phone/email in snippets)
-      for (const r of (data.organic || []) as any[]) {
+      for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         for (const ph of extractPhones(blob)) allPhones.add(ph);
         for (const m of blob.matchAll(EMAIL_RX2)) {
@@ -671,37 +746,23 @@ async function freeSkiptraceViaWeb(
         }
       }
 
-      // Also check the knowledge graph / answer box
-      const kgBlob = JSON.stringify(data.knowledgeGraph || data.answerBox || {});
-      for (const ph of extractPhones(kgBlob)) allPhones.add(ph);
-      for (const m of kgBlob.matchAll(EMAIL_RX2)) {
-        const email = m[0].toLowerCase();
-        if (!JUNK_EMAIL_RX.test(email)) {
-          try {
-            const emailDomain = email.split("@")[1];
-            if (!JUNK_DOMAIN_RX.test(emailDomain)) allEmails.add(email);
-          } catch { /* skip */ }
-        }
-      }
-
       if (allPhones.size > 0 || allEmails.size > 0) {
-        if (!okSources.includes("serper_web")) okSources.push("serper_web");
+        const tag = source === "serper" ? "serper_web" : source === "duckduckgo" ? "duckduckgo_web" : "google_web";
+        if (!okSources.includes(tag)) okSources.push(tag);
       }
 
       // ─── Scrape top non-social results with Firecrawl ──
       if (firecrawlKey) {
         const urlsToScrape: string[] = [];
-        for (const r of (data.organic || []) as any[]) {
+        for (const r of organic) {
           if (!r.link) continue;
           try {
             const host = new URL(r.link).hostname.toLowerCase();
             if (JUNK_DOMAIN_RX.test(host)) continue;
-            // Skip people-search sites that need CAPTCHA
             if (/truepeoplesearch|thatsthem|cyberbackgroundchecks|spokeo|whitepages|beenverified|intelius|peoplefinder|fastpeoplesearch|zabasearch/i.test(host)) continue;
             urlsToScrape.push(r.link);
           } catch { /* skip */ }
         }
-        // Scrape top 2 results max to stay fast
         for (const pageUrl of urlsToScrape.slice(0, 2)) {
           if (overBudget()) break;
           try {
@@ -1235,10 +1296,12 @@ async function runPipeline(searchId: string) {
       if (b.contact_name) dmCount++;
     }
 
-    // FREE DM hunt: for any business still missing a contact, hit Serper (LinkedIn/BiggerPockets/FB/web) BEFORE any paid call
-    const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    // FREE DM hunt: always runs. Uses Serper if key present, else DuckDuckGo
+    // + Google SERP scraping so we never miss decision makers because a key
+    // isn't set.
+    const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
     let freeDmFound = 0;
-    if (serperKeyForDm) {
+    {
       const missing = merged.filter(b => !b.contact_name);
       const BATCH_DM = 4;
       for (let i = 0; i < missing.length; i += BATCH_DM) {
@@ -1271,9 +1334,9 @@ async function runPipeline(searchId: string) {
       const lnk = b.raw?.apollo?.top?.linkedin_url;
       if (lnk) b.linkedin_url ||= lnk;
     }
-    // Serper lookups for other socials (parallel across businesses, capped batch size)
-    const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
-    if (serperKey) {
+    // Socials via web search (Serper if key present, else DuckDuckGo/Google SERP)
+    const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
+    {
       const BATCH = 5;
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
@@ -1289,9 +1352,9 @@ async function runPipeline(searchId: string) {
     for (const b of merged) {
       if (b.linkedin_url || b.facebook_url || b.instagram_url || b.twitter_url || b.youtube_url) socialCount++;
     }
-    const socialOk = ["linkedin"];
+    const socialOk = ["linkedin", "web_search"];
     const socialFail: string[] = [];
-    if (serperKey) socialOk.push("serper"); else socialFail.push("serper");
+    if (serperKey) socialOk.push("serper");
     await setStepDone(searchId, teamId, "social", { count: socialCount }, socialOk, socialFail);
     await logActivity(searchId, teamId, "social", "success", "🌐", `Found social profiles for ${socialCount} contacts`, { count: socialCount, percent: 55 });
 
@@ -1304,7 +1367,7 @@ async function runPipeline(searchId: string) {
     const stFail: string[] = [];
 
     const hunterKey = (settings?.hunter_api_key as string | undefined) || Deno.env.get("HUNTER_API_KEY");
-    const serperKeySkip = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    const serperKeySkip = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
     const firecrawlKeyEnrich = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY");
 
     // Safe-spend guard: probe Hunter balance
@@ -1342,8 +1405,8 @@ async function runPipeline(searchId: string) {
 
           const perBizDeadline = Math.min(skiptraceDeadline, Date.now() + PER_BUSINESS_MS);
 
-          // ⓪ FREE: Open-web search (Serper + Firecrawl) — bounded by deadline
-          if (serperKeySkip && b.contact_name && Date.now() < perBizDeadline) {
+          // ⓪ FREE: Open-web search (Serper if available, else DuckDuckGo / Google SERP)
+          if (b.contact_name && Date.now() < perBizDeadline) {
             try {
               const webResult = await freeSkiptraceViaWeb(
                 { name: b.contact_name, company: b.name, city: b.city, state: b.state, website: b.website },
