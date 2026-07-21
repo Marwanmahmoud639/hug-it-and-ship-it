@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startDiscovery, startIndividualDiscovery, cancelSearch, cancelIndividualSearch } from "@/lib/discovery.functions";
+import { runPeopleLookup } from "@/lib/lookup.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
