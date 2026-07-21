@@ -324,7 +324,7 @@ function Settings() {
               </div>
             </div>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="automation-apis" className="mt-4 space-y-4">
           <ApiKeysPanel settings={settings} save={save} />
