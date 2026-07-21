@@ -39,22 +39,24 @@ export function SurroundHero() {
         return (
           <div
             key={c.label}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            className="absolute left-1/2 top-1/2"
             style={{ transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))` }}
           >
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-14 h-14 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-center backdrop-blur-sm">
-                <c.icon className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{c.label}</span>
+            {/* Icon chip is the anchor — sits exactly on the radius */}
+            <div className="relative w-14 h-14 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-center backdrop-blur-sm">
+              <c.icon className="w-5 h-5 text-white" strokeWidth={2} />
+              {/* Label floats below without pulling the anchor off-radius */}
+              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                {c.label}
+              </span>
             </div>
             {/* Pulse line from chip to center */}
             {!reduce && (
               <motion.span
-                className="absolute top-7 left-1/2 -translate-x-1/2 origin-top block rounded-full r4d-bg-lime"
+                className="absolute top-1/2 left-1/2 origin-top block rounded-full r4d-bg-lime"
                 style={{
                   width: 2,
-                  height: radius - 56,
+                  height: radius - 28,
                   rotate: `${c.angle + 90}deg`,
                   transformOrigin: "top center",
                 }}
