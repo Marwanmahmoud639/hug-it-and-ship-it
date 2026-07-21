@@ -14,6 +14,7 @@ import { Building2, Plus, ArrowRightLeft, Users, Database, Megaphone, Palette, U
 import { toast } from "sonner";
 import { getAgencyRollup, createSubAccount, switchTeam, updateSubAccountBranding, listSubAccountMembers, assignSubAccountAdmin, type AgencyRollup } from "@/lib/teams.functions";
 import { useServerFn as _useServerFn } from "@tanstack/react-start";
+import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 
 export const Route = createFileRoute("/_app/agency")({ component: AgencyPage });
 
@@ -28,9 +29,15 @@ function AgencyPage() {
   const [secondary, setSecondary] = useState("#8B5CF6");
   const [whiteLabelName, setWhiteLabelName] = useState("");
   const [monthlyRecords, setMonthlyRecords] = useState<number>(1000);
+  const [seats, setSeats] = useState<number>(1);
+  const [niche, setNiche] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
-  const planDefaults: Record<string, number> = { starter: 1000, growth: 5000, agency: 25000 };
+  const planDefaults: Record<string, { records: number; seats: number }> = {
+    starter: { records: 1000, seats: 1 },
+    growth: { records: 5000, seats: 3 },
+    agency: { records: 25000, seats: 10 },
+  };
 
   const fetchRollup = useServerFn(getAgencyRollup);
   const create = useServerFn(createSubAccount);
@@ -58,12 +65,14 @@ function AgencyPage() {
           secondary: secondary || null,
           whiteLabelName: whiteLabelName.trim() || null,
           discoveryMonthlyLimit: Number.isFinite(monthlyRecords) ? Math.max(0, Math.floor(monthlyRecords)) : null,
+          seatLimit: Number.isFinite(seats) ? Math.max(1, Math.floor(seats)) : null,
+          niche: niche || null,
         },
       });
       if (r?.invite?.email_sent) toast.success(`Sub-account created — invite sent to ${r.invite.email}`);
       else if (r?.invite && !r.invite.email_sent) toast.success(`Sub-account created — ${r.invite.email} will get admin access on next sign-in`);
       else toast.success("Sub-account created");
-      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000);
+      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000); setSeats(1); setNiche("");
       setOpen(false);
       load();
     } catch (e: any) { toast.error(e.message ?? "Failed"); }
@@ -109,19 +118,41 @@ function AgencyPage() {
                 </div>
                 <div>
                   <Label>Plan</Label>
-                  <Select value={plan} onValueChange={(v) => { setPlan(v as any); setMonthlyRecords(planDefaults[v] ?? 1000); }}>
+                  <Select value={plan} onValueChange={(v) => {
+                    setPlan(v as any);
+                    const d = planDefaults[v] ?? planDefaults.starter;
+                    setMonthlyRecords(d.records);
+                    setSeats(d.seats);
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="starter">Starter (1k records)</SelectItem>
-                      <SelectItem value="growth">Growth (5k records)</SelectItem>
-                      <SelectItem value="agency">Agency (25k records)</SelectItem>
+                      <SelectItem value="starter">Starter (1k records · 1 seat)</SelectItem>
+                      <SelectItem value="growth">Growth (5k records · 3 seats)</SelectItem>
+                      <SelectItem value="agency">Agency (25k records · 10 seats)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sub-seats">Seats</Label>
+                  <Input id="sub-seats" type="number" min={1} value={seats}
+                    onChange={(e) => setSeats(parseInt(e.target.value || "1", 10))} />
                 </div>
                 <div>
                   <Label htmlFor="sub-records">Monthly discovery records</Label>
                   <Input id="sub-records" type="number" min={0} value={monthlyRecords}
                     onChange={(e) => setMonthlyRecords(parseInt(e.target.value || "0", 10))} />
+                </div>
+                <div>
+                  <Label>Niche (locks discovery)</Label>
+                  <Select value={niche} onValueChange={setNiche}>
+                    <SelectTrigger><SelectValue placeholder="Pick niche…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {DISCOVERY_INDUSTRIES.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground mt-1">Discovery searches auto-scope to this niche.</p>
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="sub-admin">Assigned admin email</Label>
