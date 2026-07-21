@@ -398,6 +398,7 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
           </div>
         )}
       </Card>
+      </div>
     </div>
   );
 }
