@@ -154,7 +154,10 @@ function ContactDetail() {
           </Card>
 
           <Card className="p-4">
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Phone className="w-4 h-4" /> Phones</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Phone className="w-4 h-4" /> Phones</h3>
+              {phones.length > 0 && <AiCallerButton phoneNumber={phones[0].phone_number} contactId={id} />}
+            </div>
             {phones.length === 0 ? <p className="text-sm text-muted-foreground">None</p> :
               phones.map((p) => (
                 <div key={p.id} className="text-sm py-1 border-b border-border last:border-0">
