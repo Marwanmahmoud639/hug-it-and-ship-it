@@ -66,10 +66,13 @@ function DiscoveryPage() {
   const qc = useQueryClient();
   const start = useServerFn(startDiscovery);
   const cancel = useServerFn(cancelSearch);
+  const { team } = useAuth();
+  const teamNiche = (team as any)?.default_industry as string | undefined;
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
-  const [industry, setIndustry] = useState<string>("");
+  const [industry, setIndustry] = useState<string>(teamNiche || "");
   const [titles, setTitles] = useState<string[]>(TITLES);
+  useEffect(() => { if (teamNiche && !industry) setIndustry(teamNiche); }, [teamNiche]);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
