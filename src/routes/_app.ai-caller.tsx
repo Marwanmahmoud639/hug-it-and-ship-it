@@ -182,10 +182,15 @@ function CreateAgentDialog({ open, onOpenChange, onCreated }: { open: boolean; o
           <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cash Offer Caller" /></div>
           <div>
             <Label>Voice</Label>
-            <Select value={voice.id} onValueChange={(v) => setVoice(VOICES.find(x => x.id === v) ?? VOICES[0])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={voice.id} onValueChange={(v) => setVoice(VOICES.find(x => x.id === v) ?? VOICES[0])}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{VOICES.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button type="button" variant="outline" size="icon" onClick={() => previewVoice(voice.id, script)} title="Play preview">
+                <Volume2 className="w-4 h-4" />
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground mt-1">{voice.description}</p>
           </div>
           <div><Label>Opening script</Label><Textarea rows={3} value={script} onChange={(e) => setScript(e.target.value)} /></div>
