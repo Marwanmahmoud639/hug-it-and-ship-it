@@ -77,9 +77,9 @@ const ROLE_DEFAULT_SECTIONS: Record<Role, SectionKey[]> = {
   manager: [
     "dashboard", "pipeline", "inbox", "contacts", "discovery", "areas",
     "campaigns", "workflows", "automations", "proposals", "monitors",
-    "portals", "analytics",
+    "portals", "ai_caller", "analytics",
   ],
-  agent: ["dashboard", "pipeline", "inbox", "contacts", "areas"],
+  agent: ["dashboard", "pipeline", "inbox", "contacts", "areas", "ai_caller"],
 };
 
 export function resolveSections(
