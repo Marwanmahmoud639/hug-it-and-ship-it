@@ -16,6 +16,8 @@ import { ResultsMap } from "@/components/discovery/ResultsMap";
 import { ProgressActivityLog } from "@/components/discovery/ProgressActivityLog";
 import { KeywordAutocomplete } from "@/components/discovery/KeywordAutocomplete";
 import { LocationAutocomplete } from "@/components/discovery/LocationAutocomplete";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 import { toast } from "sonner";
 import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,13 +66,14 @@ function DiscoveryPage() {
   const cancel = useServerFn(cancelSearch);
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
+  const [industry, setIndustry] = useState<string>("");
   const [titles, setTitles] = useState<string[]>(TITLES);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => start({ data: { keyword, location, titles } }),
+    mutationFn: () => start({ data: { keyword, location, industry: industry || null, titles } }),
     onSuccess: (res) => {
       setActiveSearchId(res.searchId);
       toast.success("Discovery started");
@@ -259,6 +262,26 @@ function DiscoveryPage() {
               onChange={setLocation}
               placeholder="Austin, TX  or  New York, NY  or  Florida"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Industry</Label>
+            <Select value={industry || "__any"} onValueChange={(v) => setIndustry(v === "__any" ? "" : v)}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Any industry" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="__any">Any industry (no filter)</SelectItem>
+                {DISCOVERY_INDUSTRIES.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Narrows results so a "real estate companies" search doesn't return tire shops or unrelated niches.
+            </p>
           </div>
 
 
