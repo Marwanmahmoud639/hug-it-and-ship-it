@@ -99,23 +99,57 @@ function AgencyPage() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-1" /> New sub-account</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Create sub-account</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="sub-name">Name</Label>
-                <Input id="sub-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Realty" />
-              </div>
-              <div>
-                <Label>Plan</Label>
-                <Select value={plan} onValueChange={(v) => setPlan(v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="starter">Starter</SelectItem>
-                    <SelectItem value="growth">Growth</SelectItem>
-                    <SelectItem value="agency">Agency</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label htmlFor="sub-name">Sub-account name</Label>
+                  <Input id="sub-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Realty" />
+                </div>
+                <div>
+                  <Label>Plan</Label>
+                  <Select value={plan} onValueChange={(v) => { setPlan(v as any); setMonthlyRecords(planDefaults[v] ?? 1000); }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="starter">Starter (1k records)</SelectItem>
+                      <SelectItem value="growth">Growth (5k records)</SelectItem>
+                      <SelectItem value="agency">Agency (25k records)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sub-records">Monthly discovery records</Label>
+                  <Input id="sub-records" type="number" min={0} value={monthlyRecords}
+                    onChange={(e) => setMonthlyRecords(parseInt(e.target.value || "0", 10))} />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="sub-admin">Assigned admin email</Label>
+                  <Input id="sub-admin" type="email" value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@client.com" />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    We'll invite them and grant admin access on first sign-in.
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="sub-wl">Brand name (optional)</Label>
+                  <Input id="sub-wl" value={whiteLabelName}
+                    onChange={(e) => setWhiteLabelName(e.target.value)} placeholder="Shown to their users in place of yours" />
+                </div>
+                <div>
+                  <Label htmlFor="sub-primary">Primary color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input id="sub-primary" type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="w-14 h-9 p-1" />
+                    <Input value={primary} onChange={(e) => setPrimary(e.target.value)} className="font-mono text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="sub-secondary">Secondary color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input id="sub-secondary" type="color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="w-14 h-9 p-1" />
+                    <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} className="font-mono text-xs" />
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
