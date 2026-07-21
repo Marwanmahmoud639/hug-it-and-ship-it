@@ -66,7 +66,7 @@ function AgencyPage() {
           whiteLabelName: whiteLabelName.trim() || null,
           discoveryMonthlyLimit: Number.isFinite(monthlyRecords) ? Math.max(0, Math.floor(monthlyRecords)) : null,
           seatLimit: Number.isFinite(seats) ? Math.max(1, Math.floor(seats)) : null,
-          niche: niche || null,
+          niche: niches.length ? niches.join(",") : null,
         },
       });
       if (r?.invite?.email_sent) toast.success(`Sub-account created — invite sent to ${r.invite.email}`);
