@@ -297,6 +297,7 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
   const listFn = useServerFn(listKnowledge);
   const addFn = useServerFn(addKnowledgeText);
   const removeFn = useServerFn(removeKnowledge);
+  const updateFn = useServerFn(updateAgent);
   const qc = useQueryClient();
   const { data: items = [] } = useQuery({
     queryKey: ["agent-knowledge", agent.id],
@@ -305,7 +306,21 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
+  const [script, setScript] = useState(agent.script);
+  const [prompt, setPrompt] = useState(agent.system_prompt);
+  const [savingCore, setSavingCore] = useState(false);
+  useEffect(() => { setScript(agent.script); setPrompt(agent.system_prompt); }, [agent.id]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const saveCore = async () => {
+    setSavingCore(true);
+    try {
+      await updateFn({ data: { id: agent.id, patch: { script, system_prompt: prompt } } });
+      toast.success("Script & prompt saved");
+      qc.invalidateQueries({ queryKey: ["voice-agents"] });
+    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    finally { setSavingCore(false); }
+  };
 
   const submitText = async () => {
     if (!title.trim() || !content.trim()) { toast.error("Title and content required"); return; }
