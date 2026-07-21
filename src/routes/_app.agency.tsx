@@ -72,7 +72,7 @@ function AgencyPage() {
       if (r?.invite?.email_sent) toast.success(`Sub-account created — invite sent to ${r.invite.email}`);
       else if (r?.invite && !r.invite.email_sent) toast.success(`Sub-account created — ${r.invite.email} will get admin access on next sign-in`);
       else toast.success("Sub-account created");
-      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000); setSeats(1); setNiche("");
+      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000); setSeats(1); setNiches([]);
       setOpen(false);
       load();
     } catch (e: any) { toast.error(e.message ?? "Failed"); }
