@@ -344,7 +344,30 @@ function KnowledgeTab({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold flex items-center gap-2"><Bot className="w-4 h-4 text-primary" /> System prompt & calling script</div>
+          <Button size="sm" variant="outline" onClick={() => previewVoice(agent.voice_id, script)} title="Play script preview">
+            <Volume2 className="w-4 h-4 mr-1" /> Preview voice
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">These sit at the top of every call. The knowledge library below is loaded in as reference material the AI can quote from.</p>
+        <div>
+          <Label>System prompt (how it should behave)</Label>
+          <Textarea rows={5} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+        </div>
+        <div>
+          <Label>Calling script (opening + flow)</Label>
+          <Textarea rows={5} value={script} onChange={(e) => setScript(e.target.value)} />
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={saveCore} disabled={savingCore}>
+            {savingCore && <Loader2 className="w-4 h-4 mr-1 animate-spin" />} Save script & prompt
+          </Button>
+        </div>
+      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <Card className="p-4 space-y-3">
         <div className="font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Teach your AI</div>
         <p className="text-sm text-muted-foreground">Paste a script, FAQ, pricing sheet — or upload a text/PDF file. The AI reads all of this before every call.</p>
