@@ -98,6 +98,117 @@ export type Database = {
           },
         ]
       }
+      agent_knowledge: {
+        Row: {
+          agent_id: string
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          storage_path: string | null
+          team_id: string
+          title: string
+          tokens: number
+          uploaded_by: string | null
+        }
+        Insert: {
+          agent_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          storage_path?: string | null
+          team_id: string
+          title: string
+          tokens?: number
+          uploaded_by?: string | null
+        }
+        Update: {
+          agent_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          storage_path?: string | null
+          team_id?: string
+          title?: string
+          tokens?: number
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_knowledge_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "voice_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_knowledge_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_objections: {
+        Row: {
+          agent_id: string
+          approved: boolean
+          auto_learned: boolean
+          created_at: string
+          id: string
+          objection: string
+          rebuttal: string
+          team_id: string
+          times_encountered: number
+          times_resolved: number
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          approved?: boolean
+          auto_learned?: boolean
+          created_at?: string
+          id?: string
+          objection: string
+          rebuttal?: string
+          team_id: string
+          times_encountered?: number
+          times_resolved?: number
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          approved?: boolean
+          auto_learned?: boolean
+          created_at?: string
+          id?: string
+          objection?: string
+          rebuttal?: string
+          team_id?: string
+          times_encountered?: number
+          times_resolved?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_objections_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "voice_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_objections_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -465,6 +576,54 @@ export type Database = {
         }
         Relationships: []
       }
+      call_events: {
+        Row: {
+          call_run_id: string
+          content: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          role: string | null
+          team_id: string
+        }
+        Insert: {
+          call_run_id: string
+          content?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          role?: string | null
+          team_id: string
+        }
+        Update: {
+          call_run_id?: string
+          content?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          role?: string | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_events_call_run_id_fkey"
+            columns: ["call_run_id"]
+            isOneToOne: false
+            referencedRelation: "call_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_history: {
         Row: {
           call_status: string | null
@@ -515,6 +674,88 @@ export type Database = {
           },
           {
             foreignKeyName: "call_history_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_runs: {
+        Row: {
+          agent_id: string
+          contact_id: string | null
+          cost_usd: number
+          created_at: string
+          duration_seconds: number
+          ended_at: string | null
+          id: string
+          initiated_by: string | null
+          objections_encountered: string[]
+          outcome: string | null
+          phone_number: string | null
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          summary: string | null
+          team_id: string
+          transcript: string
+        }
+        Insert: {
+          agent_id: string
+          contact_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          initiated_by?: string | null
+          objections_encountered?: string[]
+          outcome?: string | null
+          phone_number?: string | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+          team_id: string
+          transcript?: string
+        }
+        Update: {
+          agent_id?: string
+          contact_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          initiated_by?: string | null
+          objections_encountered?: string[]
+          outcome?: string | null
+          phone_number?: string | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+          team_id?: string
+          transcript?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_runs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "voice_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_runs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_runs_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -3697,6 +3938,57 @@ export type Database = {
           },
         ]
       }
+      training_sessions: {
+        Row: {
+          agent_id: string
+          created_at: string
+          duration_seconds: number
+          id: string
+          notes: string | null
+          team_id: string
+          title: string | null
+          transcript: Json
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          notes?: string | null
+          team_id: string
+          title?: string | null
+          transcript?: Json
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          notes?: string | null
+          team_id?: string
+          title?: string | null
+          transcript?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "voice_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3725,6 +4017,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_agents: {
+        Row: {
+          avg_duration_seconds: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          language: string
+          name: string
+          script: string
+          status: string
+          system_prompt: string
+          team_id: string
+          total_calls: number
+          total_connected: number
+          total_converted: number
+          updated_at: string
+          voice_id: string
+          voice_provider: string
+        }
+        Insert: {
+          avg_duration_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          language?: string
+          name: string
+          script?: string
+          status?: string
+          system_prompt?: string
+          team_id: string
+          total_calls?: number
+          total_connected?: number
+          total_converted?: number
+          updated_at?: string
+          voice_id?: string
+          voice_provider?: string
+        }
+        Update: {
+          avg_duration_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          language?: string
+          name?: string
+          script?: string
+          status?: string
+          system_prompt?: string
+          team_id?: string
+          total_calls?: number
+          total_connected?: number
+          total_converted?: number
+          updated_at?: string
+          voice_id?: string
+          voice_provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_agents_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
