@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
-import r4dLogo from "@/assets/r4d-logo.png.asset.json";
+const r4dLogo = { url: "https://res.cloudinary.com/dmn6vkxiw/image/upload/v1784670532/favicon_ljfjh2.ico" };
 
 const LINKS = [
   { href: "#sequence", label: "The Sequence" },
