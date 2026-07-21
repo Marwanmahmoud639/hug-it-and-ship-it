@@ -143,16 +143,27 @@ function AgencyPage() {
                     onChange={(e) => setMonthlyRecords(parseInt(e.target.value || "0", 10))} />
                 </div>
                 <div>
-                  <Label>Niche (locks discovery)</Label>
-                  <Select value={niche} onValueChange={setNiche}>
-                    <SelectTrigger><SelectValue placeholder="Pick niche…" /></SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {DISCOVERY_INDUSTRIES.map((i) => (
-                        <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground mt-1">Discovery searches auto-scope to this niche.</p>
+                  <Label>Niches (locks discovery)</Label>
+                  <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-border p-2 space-y-1">
+                    {DISCOVERY_INDUSTRIES.map((i) => {
+                      const checked = niches.includes(i.value);
+                      return (
+                        <label key={i.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setNiches((prev) =>
+                                e.target.checked ? [...prev, i.value] : prev.filter((v) => v !== i.value)
+                              );
+                            }}
+                          />
+                          <span>{i.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Pick one or more. Discovery searches will be scoped to these niches.</p>
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="sub-admin">Assigned admin email</Label>
