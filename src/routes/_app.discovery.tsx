@@ -21,11 +21,13 @@ import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 import { toast } from "sonner";
 import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DiscoveryCapBanner } from "@/components/app-shell/discovery-cap-banner";
 
 export const Route = createFileRoute("/_app/discovery")({
   component: () => (
     <Tabs defaultValue="businesses" className="h-full flex flex-col">
-      <div className="border-b border-border bg-card/40 px-4 md:px-6 pt-3">
+      <div className="border-b border-border bg-card/40 px-4 md:px-6 pt-3 space-y-3">
+        <DiscoveryCapBanner />
         <TabsList>
           <TabsTrigger value="businesses">Businesses</TabsTrigger>
           <TabsTrigger value="individuals">Individuals</TabsTrigger>

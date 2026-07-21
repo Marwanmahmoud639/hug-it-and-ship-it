@@ -108,21 +108,84 @@ export const clearTeamSwitch = createServerFn({ method: "POST" })
 
 export const createSubAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { name: string; plan?: "starter" | "growth" | "agency" }) =>
+  .inputValidator((d: {
+    name: string;
+    plan?: "starter" | "growth" | "agency";
+    adminEmail?: string | null;
+    primary?: string | null;
+    secondary?: string | null;
+    whiteLabelName?: string | null;
+    discoveryMonthlyLimit?: number | null;
+    contactLimit?: number | null;
+  }) =>
     z.object({
       name: z.string().min(1).max(120),
       plan: z.enum(["starter", "growth", "agency"]).default("starter"),
+      adminEmail: z.string().trim().toLowerCase().email().max(255).nullable().optional(),
+      primary: z.string().max(64).nullable().optional(),
+      secondary: z.string().max(64).nullable().optional(),
+      whiteLabelName: z.string().max(120).nullable().optional(),
+      discoveryMonthlyLimit: z.number().int().min(0).max(10_000_000).nullable().optional(),
+      contactLimit: z.number().int().min(0).max(10_000_000).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: team, error } = await supabase.rpc("create_sub_account", {
       _name: data.name,
       _plan: data.plan,
     });
     if (error) throw new Error(error.message);
-    return { team };
+    const teamId = (team as any)?.id as string | undefined;
+    if (!teamId) return { team };
+
+    // Apply branding + limits (service role: parent-admin has already been verified by RPC)
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: Record<string, any> = {};
+    if (data.primary) patch.white_label_color = data.primary;
+    if (data.secondary) patch.white_label_secondary_color = data.secondary;
+    if (data.whiteLabelName) patch.white_label_name = data.whiteLabelName;
+    if (typeof data.discoveryMonthlyLimit === "number") patch.discovery_monthly_limit = data.discoveryMonthlyLimit;
+    if (typeof data.contactLimit === "number") patch.contact_limit = data.contactLimit;
+    if (Object.keys(patch).length > 0) {
+      await (supabaseAdmin as any).from("teams").update(patch).eq("id", teamId);
+    }
+
+    // Assign admin by email — invite as admin. handle_new_user picks up invited_team_id/role
+    let invite: { email: string; email_sent: boolean; already_registered: boolean } | null = null;
+    if (data.adminEmail) {
+      await supabaseAdmin
+        .from("team_invites")
+        .upsert(
+          { team_id: teamId, email: data.adminEmail, role: "admin", invited_by: userId, status: "pending", accepted_at: null },
+          { onConflict: "team_id,email" },
+        );
+
+      // If they already have an account, upgrade them to admin of the sub-account immediately
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles").select("id").eq("email", data.adminEmail).maybeSingle();
+      if (existingProfile?.id) {
+        await supabaseAdmin.from("user_roles").upsert(
+          { user_id: (existingProfile as any).id, team_id: teamId, role: "admin" },
+          { onConflict: "user_id,team_id" },
+        );
+      }
+
+      const redirectTo = `${process.env.SITE_URL ?? "https://leads.dialingfordollars.co"}/login`;
+      const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.adminEmail, {
+        redirectTo,
+        data: { invited_team_id: teamId, invited_role: "admin", invited_by: userId, team_name: data.name },
+      });
+      invite = {
+        email: data.adminEmail,
+        email_sent: !mailErr,
+        already_registered: mailErr?.message?.toLowerCase().includes("already") ?? false,
+      };
+    }
+
+    return { team, invite };
   });
+
 
 export type AgencyRollup = {
   totalChildren: number;
