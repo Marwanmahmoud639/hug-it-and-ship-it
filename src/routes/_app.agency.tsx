@@ -14,6 +14,7 @@ import { Building2, Plus, ArrowRightLeft, Users, Database, Megaphone, Palette, U
 import { toast } from "sonner";
 import { getAgencyRollup, createSubAccount, switchTeam, updateSubAccountBranding, listSubAccountMembers, assignSubAccountAdmin, type AgencyRollup } from "@/lib/teams.functions";
 import { useServerFn as _useServerFn } from "@tanstack/react-start";
+import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 
 export const Route = createFileRoute("/_app/agency")({ component: AgencyPage });
 
