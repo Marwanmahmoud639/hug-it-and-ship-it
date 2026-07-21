@@ -1378,7 +1378,7 @@ async function runPipeline(searchId: string) {
     const stFail: string[] = [];
 
     const hunterKey = (settings?.hunter_api_key as string | undefined) || Deno.env.get("HUNTER_API_KEY");
-    const serperKeySkip = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    const serperKeySkip = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
     const firecrawlKeyEnrich = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY");
 
     // Safe-spend guard: probe Hunter balance
