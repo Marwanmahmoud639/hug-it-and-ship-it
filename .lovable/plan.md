@@ -1,61 +1,88 @@
-## Capacitor Integration Plan
+# AI Voice Caller Agent
 
-Add Capacitor to wrap the existing TanStack Start web app as a native iOS/Android shell, without changing any existing functionality.
+Add an AI voice caller that dials Discovery leads, learns from objections, and can be started/paused per contact from Pipeline and Contacts.
 
-### 1. Install dependencies
-- `bun add @capacitor/core @capacitor/app @capacitor/haptics @capacitor/keyboard @capacitor/status-bar`
-- `bun add -d @capacitor/cli @capacitor/android @capacitor/ios`
+## 1. Voice provider
 
-### 2. `capacitor.config.ts` (project root)
-```ts
-import type { CapacitorConfig } from '@capacitor/cli';
+Two free-tier options, wired behind one interface so we can swap without touching UI:
 
-const config: CapacitorConfig = {
-  appId: 'co.dialingfordollars.leads',
-  appName: 'Dialing for Dollars',
-  webDir: 'dist',
-  server: {
-    androidScheme: 'https',
-    // For live-reload during dev (commented by default):
-    // url: 'https://id-preview--cf04a8da-2943-49b6-b855-3864ef0edc8f.lovable.app',
-    // cleartext: true,
-  },
-};
+- **Web Speech API** (free, browser-native) — used for the in-app "Training Studio" (press-and-talk, agent speaks back). No account needed.
+- **Twilio Voice + ElevenLabs TTS + OpenAI-compatible STT via Lovable AI** for real outbound calls. Twilio has a free trial ($15 credit) and is the standard free path for programmatic dialing. ElevenLabs already has a connector; we reuse it for multi-voice.
 
-export default config;
+Voices: user picks per campaign/contact from the ElevenLabs voice list (Rachel, Adam, Bella, Antoni, Domi, …) plus a "Browser (Web Speech)" option for training.
+
+If the user prefers a different provider (Vapi, Retell, Bland) I can swap — Twilio+ElevenLabs is the cheapest fully-free-to-start combo.
+
+## 2. Database (new tables)
+
+```text
+voice_agents            id, team_id, name, voice_id, provider, system_prompt,
+                        script_md, greeting, temperature, created_at
+agent_knowledge         id, agent_id, team_id, kind (pdf|txt|md|url),
+                        title, storage_path, extracted_text, tokens, created_at
+agent_objections        id, agent_id, team_id, objection, best_response,
+                        times_seen, last_seen_at, source (learned|manual)
+call_runs               id, agent_id, contact_id, team_id, status
+                        (queued|dialing|in_progress|completed|failed|paused),
+                        started_at, ended_at, duration_sec, outcome
+                        (booked|callback|not_interested|voicemail|no_answer|dnc),
+                        recording_url, transcript, sentiment, cost_cents
+call_events             id, call_id, ts, role (agent|lead|system), text, meta
+training_sessions       id, agent_id, team_id, user_id, transcript, notes, created_at
 ```
 
-### 3. Build output → `dist/`
-TanStack Start's default build emits a server bundle, not a static `dist/` folder Capacitor can ship. To keep the web app fully working AND give Capacitor a static shell, add a thin SPA build path:
-- Add a script `cap:build` that runs the existing Vite client build and outputs to `dist/` (using the existing `vite.netlify.config.ts` or a new `vite.capacitor.config.ts` with `build.outDir = 'dist'` and SPA fallback).
-- All server functions (`createServerFn`) will still call the deployed web backend at `https://leads.dialingfordollars.co` — set `VITE_API_BASE` to that origin so the native shell talks to production APIs.
+Plus a `knowledge` Supabase Storage bucket (private) for uploaded PDFs/txt.
 
-### 4. Add native platforms (documented commands; run locally)
-```
-npm run cap:build
-npx cap add ios
-npx cap add android
-npx cap sync
-npx cap open ios     # requires Xcode (macOS)
-npx cap open android # requires Android Studio
-```
-Native projects (`ios/`, `android/`) are generated on the user's machine — not committed from the sandbox since they require Xcode/Android Studio to build.
+## 3. Server surface
 
-### 5. `package.json` scripts
-```
-"cap:build": "vite build --config vite.capacitor.config.ts",
-"cap:sync": "npm run cap:build && cap sync",
-"cap:ios": "npm run cap:sync && cap open ios",
-"cap:android": "npm run cap:sync && cap open android"
-```
+TanStack server functions in `src/lib/voice-agent.functions.ts`:
+- `listAgents`, `upsertAgent`, `deleteAgent`
+- `uploadKnowledge` (accepts file → Storage → parse text server-side → row)
+- `listObjections`, `upsertObjection`
+- `startCall({ contactId, agentId })`, `pauseCall`, `resumeCall`, `stopCall`
+- `listCalls`, `getCall(id)` (with events)
+- `trainingTurn({ agentId, userText })` → agent reply text via Lovable AI, saved to `training_sessions`
+- `learnFromCall(callId)` — post-call: extract objections + suggested rebuttals, upsert into `agent_objections`
 
-### 6. Out of scope (no changes)
-- No edits to existing routes, auth, campaigns, email templates, or RLS.
-- No PWA / service worker.
-- Web deployment to `leads.dialingfordollars.co` is unchanged.
+Public route `src/routes/api/public/twilio-voice.ts` for Twilio's TwiML webhook (streams TTS chunks, sends caller audio to STT, loops until hangup). `TWILIO_*` secrets requested via `add_secret` when the user hits "Enable real calls".
 
-### Questions before I build
-1. **App identifier** — confirm `co.dialingfordollars.leads` as `appId` (reverse-DNS, used in App Store / Play Store), or give me a different one?
-2. **Native API origin** — should the native app point at the production domain `https://leads.dialingfordollars.co` for all server calls? (Required so Capacitor's static shell can reach your backend.)
-3. **Deep links / push notifications / camera / geolocation** — do you want any native plugins now, or just the bare shell?
-4. **Live reload in dev** — want the `server.url` line preconfigured to your preview URL for hot reload on device, or leave commented?
+## 4. New pages / UI
+
+- `/_app.voice-agent` — top-level nav item "AI Caller":
+  - **Agents** tab: list, create, edit (name, voice picker w/ preview, script textarea, greeting)
+  - **Knowledge Base** tab: drag-drop PDF/TXT, list uploaded docs, delete
+  - **Training Studio** tab: chat log + big mic button (press-and-hold to talk, agent replies out loud). Uses Web Speech API for STT/TTS in-browser.
+  - **Objections** tab: table of learned objections and rebuttals, editable, sortable by frequency
+  - **Calls** tab: history table (contact, outcome, duration, sentiment) with row → transcript drawer
+
+- **Analytics/Intelligence**: new "AI Caller" section — totals (calls made, avg duration, booked %, top objections, cost).
+
+- **Pipeline** card: small phone icon per lead → Start/Pause AI call button, live status badge.
+- **Contacts** row + detail: same Start/Pause control, plus per-contact call history panel.
+
+## 5. Objection learning loop
+
+After each completed call:
+1. `learnFromCall` sends the transcript to Lovable AI (`google/gemini-3-flash-preview`) with a structured-output prompt asking for `objections[]` (each: quote, category, suggested_rebuttal).
+2. For each, upsert into `agent_objections` (increment `times_seen` if a fuzzy match exists).
+3. Next call assembles the agent's system prompt as: `system_prompt` + top-N objections/rebuttals + knowledge summary — so the caller keeps getting better without user intervention.
+
+## 6. Technical details
+
+- Voice picker fetches ElevenLabs `/v1/voices` server-side and caches per team.
+- Training Studio uses `window.SpeechRecognition` + `speechSynthesis` — zero cost, works offline-ish.
+- Real calls: Twilio `<Stream>` bi-directional media WebSocket → our worker → ElevenLabs TTS stream + `openai/gpt-4o-mini-transcribe` STT → Lovable AI chat with rolling context.
+- PDF parsing uses `document--parse_document` on upload; extracted text stored on the row so we can embed it into the system prompt (chunked).
+- Pause/resume: `call_runs.status='paused'` short-circuits the worker loop; Twilio call is put `<Pause length="…">` or ended and re-queued.
+- All new tables get GRANTs + RLS scoped by `team_id` following the project's existing pattern.
+
+## 7. Rollout order
+
+1. Migration + Storage bucket + GRANTs/RLS
+2. Server functions + Voice Agent page (Agents / Knowledge / Objections / Calls)
+3. Training Studio (Web Speech, no external deps) — this is fully usable immediately
+4. Pipeline + Contacts Start/Pause buttons wired to `call_runs` (queued state)
+5. Twilio + ElevenLabs webhook + secrets prompt (only step that needs user credentials)
+6. Objection-learning post-call job + Intelligence widgets
+
+Steps 1-4 give you a working trainable agent today. Step 5 turns on real phone calls once you add Twilio.

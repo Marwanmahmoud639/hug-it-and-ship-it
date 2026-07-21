@@ -1,10 +1,1 @@
-project_id = "cgqknvqaszchlmjgjjeb"
-
-[functions.discovery-run]
-verify_jwt = false
-
-[functions.apollo-webhook]
-verify_jwt = false
-
-[functions.individual-discovery-run]
-verify_jwt = false
+project_id = "fbcatqdtzcowhrkzclno"
