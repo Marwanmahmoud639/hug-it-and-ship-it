@@ -713,7 +713,7 @@ function extractPhones(text: string): string[] {
 
 async function freeSkiptraceViaWeb(
   args: { name: string; company?: string; city?: string | null; state?: string | null; website?: string | null },
-  serperKey: string,
+  serperKey: string | null,
   firecrawlKey: string | null,
   deadlineMs?: number,
 ): Promise<{ phones: string[]; emails: string[]; sources: string[] }> {
@@ -728,27 +728,22 @@ async function freeSkiptraceViaWeb(
 
   const loc = [args.city, args.state].filter(Boolean).join(", ");
 
-  // ─── Strategy 1: Google search the person's name + company via Serper ──
+  // ─── Strategy 1: web search (Serper → DuckDuckGo → Google SERP) ─────────
   const queries = [
     `"${args.name}" "${args.company || ""}" phone email contact`,
     `"${args.name}" ${args.company || ""} ${loc} phone OR email OR contact`,
     `"${args.name}" ${loc} phone number email address`,
+    // Loose match on the raw name + company (mirrors user's example URL)
+    `${args.name} ${args.company || ""}${loc ? ` ${loc}` : ""}`,
   ].filter(q => q.trim().length > 10);
 
   for (const q of queries) {
     if (overBudget()) break;
     try {
-      const res = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, num: 10 }),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
+      const { organic, source } = await webSearch(q, { serperKey, num: 10, timeoutMs: 5000 });
+      if (!organic.length) continue;
 
-      // Extract from snippets directly (Google often shows phone/email in snippets)
-      for (const r of (data.organic || []) as any[]) {
+      for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         for (const ph of extractPhones(blob)) allPhones.add(ph);
         for (const m of blob.matchAll(EMAIL_RX2)) {
@@ -762,37 +757,23 @@ async function freeSkiptraceViaWeb(
         }
       }
 
-      // Also check the knowledge graph / answer box
-      const kgBlob = JSON.stringify(data.knowledgeGraph || data.answerBox || {});
-      for (const ph of extractPhones(kgBlob)) allPhones.add(ph);
-      for (const m of kgBlob.matchAll(EMAIL_RX2)) {
-        const email = m[0].toLowerCase();
-        if (!JUNK_EMAIL_RX.test(email)) {
-          try {
-            const emailDomain = email.split("@")[1];
-            if (!JUNK_DOMAIN_RX.test(emailDomain)) allEmails.add(email);
-          } catch { /* skip */ }
-        }
-      }
-
       if (allPhones.size > 0 || allEmails.size > 0) {
-        if (!okSources.includes("serper_web")) okSources.push("serper_web");
+        const tag = source === "serper" ? "serper_web" : source === "duckduckgo" ? "duckduckgo_web" : "google_web";
+        if (!okSources.includes(tag)) okSources.push(tag);
       }
 
       // ─── Scrape top non-social results with Firecrawl ──
       if (firecrawlKey) {
         const urlsToScrape: string[] = [];
-        for (const r of (data.organic || []) as any[]) {
+        for (const r of organic) {
           if (!r.link) continue;
           try {
             const host = new URL(r.link).hostname.toLowerCase();
             if (JUNK_DOMAIN_RX.test(host)) continue;
-            // Skip people-search sites that need CAPTCHA
             if (/truepeoplesearch|thatsthem|cyberbackgroundchecks|spokeo|whitepages|beenverified|intelius|peoplefinder|fastpeoplesearch|zabasearch/i.test(host)) continue;
             urlsToScrape.push(r.link);
           } catch { /* skip */ }
         }
-        // Scrape top 2 results max to stay fast
         for (const pageUrl of urlsToScrape.slice(0, 2)) {
           if (overBudget()) break;
           try {
