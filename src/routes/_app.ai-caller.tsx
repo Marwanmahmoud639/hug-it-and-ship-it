@@ -48,6 +48,38 @@ const VOICES: Array<{ id: string; name: string; provider: "web_speech" | "eleven
   { id: "verse",          name: "Verse (Premium)",    provider: "openai",     description: "Premium neural voice." },
 ];
 
+// Preview a voice in the browser using the Web Speech API. Works for the
+// `web_speech` presets; for premium slots we still play a sample so users
+// can hear the accent/gender they picked before wiring up a paid provider.
+function previewVoice(voiceId: string, sample?: string) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    toast.error("Voice preview isn't supported in this browser.");
+    return;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    const text = (sample && sample.trim()) ||
+      "Hi, this is a quick preview of how I'll sound on your calls.";
+    const u = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const wantsFemale = voiceId.includes("female");
+    const wantsMale = voiceId.includes("male");
+    const uk = voiceId.includes("uk");
+    const au = voiceId.includes("au");
+    u.lang = uk ? "en-GB" : au ? "en-AU" : "en-US";
+    const match = voices.find(v =>
+      (uk ? v.lang.startsWith("en-GB") : au ? v.lang.startsWith("en-AU") : v.lang.startsWith("en"))
+      && (wantsFemale ? /female|samantha|victoria|karen|zira|ava|allison/i.test(v.name)
+        : wantsMale ? /male|david|daniel|alex|fred/i.test(v.name) : true)
+    ) ?? voices.find(v => v.lang.startsWith("en"));
+    if (match) u.voice = match;
+    u.rate = 1.0;
+    window.speechSynthesis.speak(u);
+  } catch {
+    toast.error("Couldn't play voice preview.");
+  }
+}
+
 type Agent = {
   id: string; name: string; description: string | null;
   voice_id: string; voice_provider: string; language: string;
