@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CommandPalette } from "./command-palette";
 import { TeamSwitcher } from "./team-switcher";
+import { DiscoveryCreditsBadge } from "./discovery-credits-badge";
 import { cn } from "@/lib/utils";
 
 type Notif = { id: string; title: string; body: string | null; read: boolean; created_at: string; type?: string | null };
