@@ -1307,10 +1307,12 @@ async function runPipeline(searchId: string) {
       if (b.contact_name) dmCount++;
     }
 
-    // FREE DM hunt: for any business still missing a contact, hit Serper (LinkedIn/BiggerPockets/FB/web) BEFORE any paid call
-    const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY");
+    // FREE DM hunt: always runs. Uses Serper if key present, else DuckDuckGo
+    // + Google SERP scraping so we never miss decision makers because a key
+    // isn't set.
+    const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
     let freeDmFound = 0;
-    if (serperKeyForDm) {
+    {
       const missing = merged.filter(b => !b.contact_name);
       const BATCH_DM = 4;
       for (let i = 0; i < missing.length; i += BATCH_DM) {
