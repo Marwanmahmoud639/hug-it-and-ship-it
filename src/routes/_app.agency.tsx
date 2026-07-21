@@ -29,9 +29,15 @@ function AgencyPage() {
   const [secondary, setSecondary] = useState("#8B5CF6");
   const [whiteLabelName, setWhiteLabelName] = useState("");
   const [monthlyRecords, setMonthlyRecords] = useState<number>(1000);
+  const [seats, setSeats] = useState<number>(1);
+  const [niche, setNiche] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
-  const planDefaults: Record<string, number> = { starter: 1000, growth: 5000, agency: 25000 };
+  const planDefaults: Record<string, { records: number; seats: number }> = {
+    starter: { records: 1000, seats: 1 },
+    growth: { records: 5000, seats: 3 },
+    agency: { records: 25000, seats: 10 },
+  };
 
   const fetchRollup = useServerFn(getAgencyRollup);
   const create = useServerFn(createSubAccount);
