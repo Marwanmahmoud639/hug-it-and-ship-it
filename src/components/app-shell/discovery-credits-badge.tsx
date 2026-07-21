@@ -37,16 +37,14 @@ export function DiscoveryCreditsBadge() {
     <Link
       to="/discovery"
       className={cn(
-        "hidden md:flex items-center gap-2 h-10 px-3 rounded-lg border text-xs font-medium transition-colors hover:brightness-110",
+        "hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-lg border text-xs font-medium leading-none whitespace-nowrap transition-colors hover:brightness-110",
         tone,
       )}
-      title={`Discovery records used this month: ${used ?? "…"} of ${limit}`}
+      title={`Discovery records used this month: ${used ?? "…"} of ${limit.toLocaleString()}`}
     >
-      <Sparkles className="w-3.5 h-3.5" />
-      <div className="flex flex-col leading-tight">
-        <span className="font-semibold">{remaining.toLocaleString()} left</span>
-        <span className="text-[10px] opacity-70">{(used ?? 0).toLocaleString()} / {limit.toLocaleString()} records</span>
-      </div>
+      <Sparkles className="w-3.5 h-3.5 shrink-0" />
+      <span className="font-semibold">{remaining.toLocaleString()}</span>
+      <span className="opacity-70">/ {limit.toLocaleString()} left</span>
     </Link>
   );
 }
