@@ -118,19 +118,41 @@ function AgencyPage() {
                 </div>
                 <div>
                   <Label>Plan</Label>
-                  <Select value={plan} onValueChange={(v) => { setPlan(v as any); setMonthlyRecords(planDefaults[v] ?? 1000); }}>
+                  <Select value={plan} onValueChange={(v) => {
+                    setPlan(v as any);
+                    const d = planDefaults[v] ?? planDefaults.starter;
+                    setMonthlyRecords(d.records);
+                    setSeats(d.seats);
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="starter">Starter (1k records)</SelectItem>
-                      <SelectItem value="growth">Growth (5k records)</SelectItem>
-                      <SelectItem value="agency">Agency (25k records)</SelectItem>
+                      <SelectItem value="starter">Starter (1k records · 1 seat)</SelectItem>
+                      <SelectItem value="growth">Growth (5k records · 3 seats)</SelectItem>
+                      <SelectItem value="agency">Agency (25k records · 10 seats)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sub-seats">Seats</Label>
+                  <Input id="sub-seats" type="number" min={1} value={seats}
+                    onChange={(e) => setSeats(parseInt(e.target.value || "1", 10))} />
                 </div>
                 <div>
                   <Label htmlFor="sub-records">Monthly discovery records</Label>
                   <Input id="sub-records" type="number" min={0} value={monthlyRecords}
                     onChange={(e) => setMonthlyRecords(parseInt(e.target.value || "0", 10))} />
+                </div>
+                <div>
+                  <Label>Niche (locks discovery)</Label>
+                  <Select value={niche} onValueChange={setNiche}>
+                    <SelectTrigger><SelectValue placeholder="Pick niche…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {DISCOVERY_INDUSTRIES.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground mt-1">Discovery searches auto-scope to this niche.</p>
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="sub-admin">Assigned admin email</Label>
