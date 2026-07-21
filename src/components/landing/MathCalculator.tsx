@@ -50,12 +50,12 @@ export function MathCalculator() {
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             <Stat label="Meetings now" value={result.meetingsNow} />
-            <Stat label="Meetings on R4D" value={result.meetingsR4D} accent />
+            <Stat label="Meetings on the engine" value={result.meetingsR4D} accent />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-zinc-500 mb-6">
             <TrendingUp className="w-3.5 h-3.5" />
-            Assumes R4D's 5-channel sequence lifts reply rate to ~{R4D_REPLY}%.
+            Assumes the engine's 5-channel sequence lifts reply rate to ~{R4D_REPLY}%.
           </div>
 
           <a

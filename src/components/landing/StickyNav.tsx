@@ -35,8 +35,8 @@ export function StickyNav() {
       >
         <div className={`max-w-7xl mx-auto px-6 flex items-center justify-between transition-all ${scrolled ? "h-14" : "h-20"}`}>
           <Link to="/" className="flex items-center gap-2">
-            <img src={r4dLogo.url} alt="R4D" className="w-8 h-8 rounded-lg object-contain" />
-            <span className="font-black tracking-tight text-lg text-white">R4D</span>
+            <img src={r4dLogo.url} alt="The engine" className="w-8 h-8 rounded-lg object-contain" />
+            <span className="font-black tracking-tight text-lg text-white">the engine</span>
           </Link>
 
           <nav
@@ -75,8 +75,8 @@ export function StickyNav() {
         <div className="fixed inset-0 z-[60] bg-black md:hidden flex flex-col">
           <div className="flex items-center justify-between px-6 h-20">
             <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
-              <img src={r4dLogo.url} alt="R4D" className="w-8 h-8 rounded-lg object-contain" />
-              <span className="font-black text-lg text-white">R4D</span>
+              <img src={r4dLogo.url} alt="The engine" className="w-8 h-8 rounded-lg object-contain" />
+              <span className="font-black text-lg text-white">the engine</span>
             </Link>
             <button onClick={() => setOpen(false)} className="w-10 h-10 rounded-lg border border-white/10 text-white flex items-center justify-center" aria-label="Close menu">
               <X className="w-5 h-5" />

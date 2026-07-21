@@ -1,5 +1,5 @@
 const LOGOS = [
-  "Northforge", "Outbound Republic", "Velocity B2B",
+  "One 6-person B2B agency", "Outbound Republic", "Velocity B2B",
   "Apex Partners", "Signal Studio", "Cold Iron Co.",
 ];
 

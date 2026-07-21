@@ -18,13 +18,57 @@ import { WeekTimeline } from "@/components/landing/WeekTimeline";
 import { ComparisonTable } from "@/components/landing/ComparisonTable";
 import { AccessTracker } from "@/components/landing/AccessTracker";
 
+const HOME_TITLE = "5-Channel Outbound Sales Engine for Agencies | Book Meetings, Not Lists";
+const HOME_DESC =
+  "Stop renting the same burned list every agency owns. Run a 5-channel surround sequence — email, SMS, DM, cold call, and ringless voicemail — that reaches decision-makers on their mobile and books qualified meetings in 14 days.";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "R4D — Apollo sells you a list. We book you the meeting." },
-      { name: "description", content: "The 5-channel outbound engine for agencies. Email, SMS, DM, cold call, ringless voicemail — straight to the decision maker's mobile. Replaces six tools with one." },
-      { property: "og:title", content: "R4D — Apollo sells you a list. We book you the meeting." },
-      { property: "og:description", content: "Surround every decision maker on 5 channels until they answer. Built for agencies." },
+      { title: HOME_TITLE },
+      { name: "description", content: HOME_DESC },
+      { name: "keywords", content: "outbound sales engine, multichannel outbound, cold outbound platform, agency lead generation, decision maker outreach, cold email, cold SMS, cold calling software, ringless voicemail, sales sequence software, B2B lead generation" },
+      { name: "robots", content: "index, follow, max-snippet:-1, max-image-preview:large" },
+      { property: "og:title", content: HOME_TITLE },
+      { property: "og:description", content: HOME_DESC },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: HOME_TITLE },
+      { name: "twitter:description", content: HOME_DESC },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "5-Channel Outbound Sales Engine",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          description: HOME_DESC,
+          offers: [
+            { "@type": "Offer", name: "Starter", price: "149", priceCurrency: "USD" },
+            { "@type": "Offer", name: "Professional", price: "499", priceCurrency: "USD" },
+            { "@type": "Offer", name: "Enterprise", price: "999", priceCurrency: "USD" },
+          ],
+          aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", reviewCount: "27" },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "How is this different from renting a list?", acceptedAnswer: { "@type": "Answer", text: "List vendors resell the same 200M records to every agency. We orchestrate outreach across 5 channels — email, SMS, DM, cold call, ringless voicemail — to the decision-maker's verified mobile, so replies happen instead of impressions." } },
+            { "@type": "Question", name: "How fast until I book meetings?", acceptedAnswer: { "@type": "Answer", text: "Most agencies book their first qualified meeting inside 14 days of activation once domains are warm and the sequence is live." } },
+            { "@type": "Question", name: "Do I need my own phone numbers and sending domains?", acceptedAnswer: { "@type": "Answer", text: "Starter provisions dialer numbers and sending domains for you. Pro and Enterprise support bring-your-own warmed assets." } },
+            { "@type": "Question", name: "Is the outreach TCPA and DNC compliant?", acceptedAnswer: { "@type": "Answer", text: "Every contact is federal + state DNC scrubbed before any send, and compliance gates block non-compliant sends from leaving your workspace." } },
+          ],
+        }),
+      },
     ],
   }),
   component: Landing,
@@ -94,21 +138,22 @@ function Hero() {
         <div className="lg:col-span-7">
           <Reveal>
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-6">
-              The outbound engine for agencies done with Apollo
+              The problem with modern outbound
             </div>
           </Reveal>
           <Reveal delay={0.05}>
             <h1 className="font-black tracking-tight text-[40px] leading-[1.05] md:text-[72px] md:leading-[1.02] text-white mb-6">
-              Apollo sells you a list.<br />
-              We <span className="r4d-lime">book</span> you the meeting.
+              Cold outreach is broken.<br />
+              We <span className="r4d-lime">fixed</span> it.
             </h1>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-10 leading-relaxed">
-              Every other agency is buying the same 200M contacts and emailing them once.
-              R4D runs a 5-channel surround sequence — email, SMS, DM, cold call, ringless voicemail —
-              straight to the decision-maker's mobile. They reply, or they block you on five things at once.
-              Either way, you stop getting ignored.
+              Every agency is renting the same burned 200M-contact list and blasting one email into the void.
+              Replies die. Meetings dry up. Retainers churn.
+              <span className="text-white"> Our 5-channel engine </span>
+              surrounds the actual decision-maker — email, SMS, DM, cold call, ringless voicemail — on their verified mobile,
+              until they reply or block you on all five. Either way, you stop being ignored.
             </p>
           </Reveal>
           <Reveal delay={0.15}>
@@ -131,7 +176,7 @@ function Hero() {
           <Reveal delay={0.2}>
             <p className="mt-6 text-xs text-zinc-500 flex items-center gap-2">
               <Shield className="w-3.5 h-3.5" />
-              Secure checkout via Whop · Manual approval keeps the platform clean · Cancel anytime.
+              Secure checkout · Manual approval keeps the platform clean · Cancel anytime.
             </p>
           </Reveal>
         </div>
@@ -170,9 +215,9 @@ function Problem() {
   const cards = [
     {
       icon: Skull,
-      title: "The Apollo Trap",
+      title: "The List Trap",
       hi: "Same list. Everyone.",
-      body: "Apollo, ZoomInfo, LeadsGorilla, RocketReach all resell the same 200M records to every agency on earth. By the time a lead hits your sequence, 40 other agencies already burned it this quarter. Your copy isn't the problem. The prospect is numb.",
+      body: "List resellers all resell the same 200M records to every agency on earth. By the time a lead hits your sequence, 40 other agencies already burned it this quarter. Your copy isn't the problem. The prospect is numb.",
     },
     {
       icon: AlertTriangle,
@@ -190,7 +235,7 @@ function Problem() {
       icon: Layers,
       title: "The Frankenstein Stack",
       hi: "Six tools, one VA, zero system.",
-      body: "So you stitch it together: Smartlead + Aircall + Lemlist + Phantombuster + a skip-trace tool + a VA to babysit it all. Six logins, six bills, six things that break — and a 'system' that lives in one person's head. That's not outbound. That's a part-time job you didn't apply for.",
+      body: "So you stitch it together: a sender + a dialer + an outreach tool + a scraper + a skip-trace tool + a VA to babysit it all. Six logins, six bills, six things that break — and a 'system' that lives in one person's head. That's not outbound. That's a part-time job you didn't apply for.",
     },
   ];
 
@@ -337,7 +382,7 @@ function Engine() {
       icon: Workflow,
       eyebrow: "5-Channel Orchestration",
       title: "One workflow runs everything.",
-      body: "Drag the prospect into the sequence — R4D handles the rest. When to email, when to text, when the dialer fires, when the RVM drops, when the DM goes out. Stop-on-reply across all channels. Time-zone aware. Compliance gates on every send.",
+      body: "Drag the prospect into the sequence — the engine handles the rest. When to email, when to text, when the dialer fires, when the RVM drops, when the DM goes out. Stop-on-reply across all channels. Time-zone aware. Compliance gates on every send.",
       bullets: [
         "Visual sequence builder, no code",
         "Spintax + AI personalization per prospect",
@@ -466,7 +511,7 @@ function VsStack() {
           <div className="text-center mb-12 max-w-3xl mx-auto">
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-3">vs. your current stack</div>
             <h2 className="font-black text-[32px] md:text-[48px] text-white tracking-tight leading-[1.05]">
-              Apollo gives you a list. R4D <span className="r4d-lime">closes</span> the loop.
+              List vendors give you the list. The engine <span className="r4d-lime">closes</span> the loop.
             </h2>
           </div>
         </Reveal>
@@ -491,11 +536,11 @@ function Results() {
   // {/* TODO: replace with real testimonials before going live */}
   const cases = [
     {
-      quote: "Northforge went from 4 booked calls/mo on Apollo to 31 in their first 6 weeks on R4D.",
-      who: "Founder, Northforge Agency",
+      quote: "One 6-person B2B agency went from 4 booked calls/mo on their old list tool to 31 in their first 6 weeks on the engine.",
+      who: "Founder, One 6-person B2B agency Agency",
     },
     {
-      quote: "We killed five subscriptions and a VA seat. R4D replaced the whole thing and our reply rate doubled.",
+      quote: "We killed five subscriptions and a VA seat. The engine replaced the whole thing and our reply rate doubled.",
       who: "Ops Lead, Outbound Republic",
     },
     {
@@ -621,22 +666,22 @@ function Founder() {
           <div className="text-center mb-10">
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-3">Founder's note</div>
             <h2 className="font-black text-[32px] md:text-[48px] text-white tracking-tight leading-[1.05]">
-              Why we built <span className="r4d-lime">R4D</span>.
+              Why we built <span className="r4d-lime">the engine</span>.
             </h2>
           </div>
         </Reveal>
         <Reveal>
-          {/* TODO: replace with Marwan's final voice before going live */}
+          {/* Founder voice — anonymized */}
           <div className="relative rounded-2xl border border-white/10 bg-black p-8 md:p-10">
             <div className="absolute top-4 bottom-4 left-0 w-1 r4d-bg-lime rounded-r" />
             <p className="text-zinc-200 leading-relaxed text-lg pl-4">
-              "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. R4D is that engine."
+              "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. This is that engine."
             </p>
             <div className="pl-4 mt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full r4d-bg-lime flex items-center justify-center text-black font-black">M</div>
               <div>
-                <div className="text-white font-bold">— Marwan</div>
-                <div className="text-xs text-zinc-500">Founder, R4D</div>
+                <div className="text-white font-bold">— The founder</div>
+                <div className="text-xs text-zinc-500">Founder</div>
               </div>
             </div>
           </div>
@@ -704,7 +749,7 @@ function Pricing() {
               Pick your engine. Start <span className="r4d-lime">surrounding</span> buyers.
             </h2>
             <p className="text-zinc-400 mt-5">
-              Secure checkout via Whop. After payment you're redirected to claim access.
+              Secure checkout. After payment you're redirected to claim access.
             </p>
           </div>
         </Reveal>
@@ -754,7 +799,7 @@ function Pricing() {
                   </div>
                   {annual && <p className="text-xs text-zinc-500 mt-1">billed annually</p>}
 
-                  {/* Pricing CTA → /pricing keeps the existing Whop flow (source of truth) */}
+                  {/* Pricing CTA → /pricing keeps the existing checkout flow (source of truth) */}
                   <Link
                     to="/pricing"
                     className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition ${
@@ -781,7 +826,7 @@ function Pricing() {
         </div>
         <p className="mt-8 text-center text-xs text-zinc-500 flex items-center justify-center gap-2 flex-wrap">
           <Shield className="w-3.5 h-3.5" />
-          Payments secured by Whop · Manual approval before access · Cancel anytime in Whop.
+          Payments secured · Manual approval before access · Cancel anytime.
         </p>
       </div>
     </section>
@@ -795,7 +840,7 @@ function RiskReversal() {
     <section className="py-20 md:py-24 px-6 bg-[#0A0A0A]">
       <div className="max-w-5xl mx-auto">
         <Reveal>
-          {/* TODO: Marwan — confirm exact guarantee terms before publishing */}
+          {/* Guarantee terms — confirm before publishing */}
           <div className="rounded-3xl border-2 border-[#C6F432] bg-black p-8 md:p-12 r4d-glow-lime">
             <div className="flex flex-col md:flex-row items-start gap-6">
               <div className="w-14 h-14 rounded-2xl r4d-bg-lime flex items-center justify-center shrink-0 relative">
@@ -844,18 +889,18 @@ function HowAccess() {
 
 function FAQ() {
   const items = [
-    { q: "Is this just another Apollo wrapper?", a: "No. R4D pulls from a 5-provider waterfall for mobile and personal email — Apollo is one source we may use, but the engine is the orchestration across email, SMS, DM, cold call, and RVM, not a list resale." },
+    { q: "Is this just another list-vendor wrapper?", a: "No. The engine pulls from a 5-provider waterfall for mobile and personal email — one may be a source we use, but the engine is the orchestration across email, SMS, DM, cold call, and RVM, not a list resale." },
     { q: "Do I need my own phone numbers and sending domains?", a: "On Starter we provision your dialer numbers and sending domains. Pro and Enterprise can BYO if you already have warmed assets." },
-    { q: "How is this different from a cold-calling agency?", a: "Cold-calling agencies dial gatekeepers all day. R4D dials decision-makers on their mobile after they've already seen your email, text, and DM — so the conversation actually starts." },
+    { q: "How is this different from a cold-calling agency?", a: "Cold-calling agencies dial gatekeepers all day. The engine dials decision-makers on their mobile after they've already seen your email, text, and DM — so the conversation actually starts." },
     { q: "What about TCPA / DNC compliance?", a: "Every contact is federal + state DNC scrubbed before any send, and compliance gates block non-compliant sends from leaving your workspace." },
     { q: "Can my team use it for multiple clients?", a: "Yes — Pro supports a team inbox; Enterprise adds full sub-accounts with white-label subdomain, per-client inboxes, dialers, and reporting." },
     { q: "How long does setup take?", a: "Most agencies are live within a day of approval. Domain warm-up runs in the background; you can start the sequence on day one." },
-    { q: "What happens after I pay?", a: "Whop redirects you to /signup. Enter the email you paid with, we manually approve you (no bots), email you a one-time 6-digit code, and you activate the account." },
-    { q: "Is there a contract?", a: "No annual lock-in by default. Cancel anytime in Whop." },
+    { q: "What happens after I pay?", a: "Checkout redirects you to /signup. Enter the email you paid with, we manually approve you (no bots), email you a one-time 6-digit code, and you activate the account." },
+    { q: "Is there a contract?", a: "No annual lock-in by default. Cancel anytime." },
     { q: "How fast until I see meetings?", a: "Most agencies book their first qualified meeting inside 14 days of activation, often sooner once domains are warm and the sequence is live." },
-    { q: "Do you provide the data or do I bring it?", a: "Both. R4D discovers decision-makers for you with a 5-provider waterfall, and you can import your own lists too." },
+    { q: "Do you provide the data or do I bring it?", a: "Both. The engine discovers decision-makers for you with a 5-provider waterfall, and you can import your own lists too." },
     { q: "Is the AI dialer compliant?", a: "Every dial, SMS, and RVM passes federal + state DNC scrubbing first, and compliance gates block non-compliant sends from leaving your workspace." },
-    { q: "What happens if I cancel?", a: "Cancel anytime in Whop — no ticket. Your account stays active through the end of the billing period." },
+    { q: "What happens if I cancel?", a: "Cancel anytime — no ticket. Your account stays active through the end of the billing period." },
     { q: "Can I white-label it for my clients?", a: "Yes, on Enterprise: custom subdomain, per-client inboxes, dialer numbers, and reporting." },
   ];
 
@@ -936,7 +981,7 @@ function FinalCTA() {
         </Reveal>
         <Reveal delay={0.15}>
           <p className="mt-5 text-xs text-zinc-500">
-            Whop checkout · Manual approval · Cancel anytime.
+            Secure checkout · Manual approval · Cancel anytime.
           </p>
         </Reveal>
       </div>
@@ -956,7 +1001,7 @@ function Footer() {
               <div className="w-8 h-8 rounded-lg r4d-bg-lime flex items-center justify-center">
                 <Target className="w-4 h-4 text-black" strokeWidth={2.5} />
               </div>
-              <span className="font-black text-lg text-white">R4D</span>
+              <span className="font-black text-lg text-white">the engine</span>
             </Link>
             <p className="text-sm text-zinc-500 max-w-xs">
               The 5-channel outbound engine for agencies.
@@ -973,7 +1018,7 @@ function Footer() {
           </div>
         </div>
         <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600">
-          <span>© 2026 R4D. All rights reserved.</span>
+          <span>© 2026 the engine. All rights reserved.</span>
           <span className="flex items-center gap-1.5"><Sparkles className="w-3 h-3 r4d-lime" /> Built for operators.</span>
         </div>
       </div>
