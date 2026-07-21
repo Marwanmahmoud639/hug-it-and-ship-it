@@ -67,20 +67,9 @@ const SOCIAL_PLATFORMS = [
   { key: "youtube_url" as const, site: "youtube.com", hostRx: /(^|\.)youtube\.com$/i },
 ];
 
-async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Promise<string | null> {
+async function serperTopUrl(query: string, apiKey: string | null, hostRx: RegExp): Promise<string | null> {
   try {
-    const ctl = new AbortController();
-    const to = setTimeout(() => ctl.abort(), 5000);
-    const res = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ q: query, num: 5 }),
-      signal: ctl.signal,
-    });
-    clearTimeout(to);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const organic = (data.organic || []) as { link?: string }[];
+    const { organic } = await webSearch(query, { serperKey: apiKey, num: 5, timeoutMs: 5000 });
     for (const o of organic) {
       if (!o.link) continue;
       try {
@@ -97,13 +86,13 @@ async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Prom
 async function enrichSocials(
   fullName: string | undefined,
   company: string | undefined,
-  serperKey: string | undefined,
+  serperKey: string | null | undefined,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
-  if (!serperKey || !fullName) return {};
+  if (!fullName) return {};
   const q = `"${fullName}"${company ? ` "${company}"` : ""}`;
   const results = await Promise.allSettled(
     SOCIAL_PLATFORMS.map((p) =>
-      serperTopUrl(`site:${p.site} ${q}`, serperKey, p.hostRx).then((url) => ({ key: p.key, url })),
+      serperTopUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx).then((url) => ({ key: p.key, url })),
     ),
   );
   const out: Record<string, string> = {};
