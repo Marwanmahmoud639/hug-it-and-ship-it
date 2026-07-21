@@ -67,14 +67,10 @@ function Settings() {
   const doneCount = checks.filter(c => c.ok).length;
   const progressPct = checks.length ? Math.round((doneCount / checks.length) * 100) : 0;
 
-  if (!isAdmin) {
-    return (
-      <div className="p-4 md:p-6 max-w-4xl mx-auto page-in">
-        <PageHeader title="Settings" />
-        <Card className="p-6 bg-card"><p className="text-sm text-muted-foreground">Settings are admin-only.</p></Card>
-      </div>
-    );
-  }
+  // Discovery API keys and Social keys are restricted to the assigned admin
+  // (team admin role or super admin). All other tabs remain visible so team
+  // members can send campaigns, manage notifications, pipeline, account, etc.
+  const canManageApiKeys = isAdmin || isSuperAdmin;
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto page-in">

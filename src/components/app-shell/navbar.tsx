@@ -94,6 +94,8 @@ export function Navbar() {
           </Button>
         </div>
 
+        <DiscoveryCreditsBadge />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Theme"><ThemeIcon className="w-4 h-4" /></Button>
