@@ -317,11 +317,6 @@ export const startCall = createServerFn({ method: "POST" })
       started_at: new Date().toISOString(),
     }).select("*").single();
     if (error) throw new Error(error.message);
-    await context.supabase.from("voice_agents")
-      .update({ total_calls: (undefined as any) })
-      .eq("id", data.agent_id).eq("team_id", teamId);
-    // increment via RPC-less approach:
-    await context.supabase.rpc("noop_ignore").catch(() => {});
     return row;
   });
 
