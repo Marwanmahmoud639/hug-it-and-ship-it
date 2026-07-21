@@ -23,7 +23,14 @@ function AgencyPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [plan, setPlan] = useState<"starter" | "growth" | "agency">("starter");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [primary, setPrimary] = useState("#2563EB");
+  const [secondary, setSecondary] = useState("#8B5CF6");
+  const [whiteLabelName, setWhiteLabelName] = useState("");
+  const [monthlyRecords, setMonthlyRecords] = useState<number>(1000);
   const [busy, setBusy] = useState(false);
+
+  const planDefaults: Record<string, number> = { starter: 1000, growth: 5000, agency: 25000 };
 
   const fetchRollup = useServerFn(getAgencyRollup);
   const create = useServerFn(createSubAccount);
@@ -42,13 +49,27 @@ function AgencyPage() {
     if (!name.trim()) return;
     setBusy(true);
     try {
-      await create({ data: { name: name.trim(), plan } });
-      toast.success("Sub-account created");
-      setName(""); setPlan("starter"); setOpen(false);
+      const r: any = await create({
+        data: {
+          name: name.trim(),
+          plan,
+          adminEmail: adminEmail.trim() || null,
+          primary: primary || null,
+          secondary: secondary || null,
+          whiteLabelName: whiteLabelName.trim() || null,
+          discoveryMonthlyLimit: Number.isFinite(monthlyRecords) ? Math.max(0, Math.floor(monthlyRecords)) : null,
+        },
+      });
+      if (r?.invite?.email_sent) toast.success(`Sub-account created — invite sent to ${r.invite.email}`);
+      else if (r?.invite && !r.invite.email_sent) toast.success(`Sub-account created — ${r.invite.email} will get admin access on next sign-in`);
+      else toast.success("Sub-account created");
+      setName(""); setPlan("starter"); setAdminEmail(""); setPrimary("#2563EB"); setSecondary("#8B5CF6"); setWhiteLabelName(""); setMonthlyRecords(1000);
+      setOpen(false);
       load();
     } catch (e: any) { toast.error(e.message ?? "Failed"); }
     finally { setBusy(false); }
   };
+
 
   const openTeam = async (id: string) => {
     try {
