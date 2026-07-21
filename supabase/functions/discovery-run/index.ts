@@ -1416,8 +1416,8 @@ async function runPipeline(searchId: string) {
 
           const perBizDeadline = Math.min(skiptraceDeadline, Date.now() + PER_BUSINESS_MS);
 
-          // ⓪ FREE: Open-web search (Serper + Firecrawl) — bounded by deadline
-          if (serperKeySkip && b.contact_name && Date.now() < perBizDeadline) {
+          // ⓪ FREE: Open-web search (Serper if available, else DuckDuckGo / Google SERP)
+          if (b.contact_name && Date.now() < perBizDeadline) {
             try {
               const webResult = await freeSkiptraceViaWeb(
                 { name: b.contact_name, company: b.name, city: b.city, state: b.state, website: b.website },
