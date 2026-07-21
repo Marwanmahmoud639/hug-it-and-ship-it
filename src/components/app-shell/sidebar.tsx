@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutGrid, Search, Users, Kanban, Megaphone, BarChart3, UsersRound, Settings,
-  ChevronsLeft, ChevronsRight, Shield, Zap, GitBranch, FileText, Share2, Radar, Inbox, MapPin, Building2,
+  ChevronsLeft, ChevronsRight, Shield, Zap, GitBranch, FileText, Share2, Radar, Inbox, MapPin, Building2, PhoneCall,
 } from "lucide-react";
 import { useState, memo } from "react";
 import { cn } from "@/lib/utils";
