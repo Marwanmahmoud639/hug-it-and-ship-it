@@ -91,7 +91,9 @@ function Login() {
       email: addr,
       options: {
         shouldCreateUser: isOwner, // only the product owner can be created via OTP
-        emailRedirectTo: window.location.origin + "/dashboard",
+        // NO emailRedirectTo — omitting it makes Supabase send a code-only email
+        // (single-use 6-digit OTP) instead of a magic link. The user types the
+        // code back into the form and we verify with verifyOtp below.
       },
     });
     if (error) {
@@ -204,16 +206,25 @@ function Login() {
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);
-                  const result = await lovable.auth.signInWithOAuth("google", {
-                    redirect_uri: window.location.origin + "/dashboard",
-                  });
-                  if (result.error) {
+                  try {
+                    // redirect_uri MUST be a public same-origin URL — not a protected route.
+                    // The _authenticated layout would bounce back to /auth on hard refresh before
+                    // Supabase hydrates the session, causing "Google sign-in failed" flashes.
+                    const result = await lovable.auth.signInWithOAuth("google", {
+                      redirect_uri: window.location.origin,
+                    });
+                    if (result.error) {
+                      toast.error(result.error.message ?? "Google sign-in failed");
+                      setBusy(false);
+                      return;
+                    }
+                    if (result.redirected) return; // full-page redirect; browser is leaving
+                    // Popup/web_message flow — session is now set. Route to dashboard.
+                    nav({ to: "/dashboard" });
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Google sign-in failed");
                     setBusy(false);
-                    toast.error(result.error.message ?? "Google sign-in failed");
-                    return;
                   }
-                  if (result.redirected) return; // browser navigating to Google
-                  nav({ to: "/dashboard" });
                 }}
               >
                 <GoogleIcon /> Continue with Google
