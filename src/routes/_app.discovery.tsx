@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startDiscovery, startIndividualDiscovery, cancelSearch, cancelIndividualSearch } from "@/lib/discovery.functions";
+import { runPeopleLookup } from "@/lib/lookup.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +20,7 @@ import { LocationAutocomplete } from "@/components/discovery/LocationAutocomplet
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 import { toast } from "sonner";
-import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban } from "lucide-react";
+import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban, Search as SearchIcon, UserSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiscoveryCapBanner } from "@/components/app-shell/discovery-cap-banner";
 import { useAuth } from "@/lib/auth";
@@ -32,10 +33,12 @@ export const Route = createFileRoute("/_app/discovery")({
         <TabsList>
           <TabsTrigger value="businesses">Businesses</TabsTrigger>
           <TabsTrigger value="individuals">Individuals</TabsTrigger>
+          <TabsTrigger value="lookup">People Lookup</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="businesses" className="flex-1 m-0 overflow-hidden"><DiscoveryPage /></TabsContent>
       <TabsContent value="individuals" className="flex-1 m-0 overflow-hidden"><IndividualsTab /></TabsContent>
+      <TabsContent value="lookup" className="flex-1 m-0 overflow-hidden"><PeopleLookupTab /></TabsContent>
     </Tabs>
   ),
 });
@@ -868,6 +871,173 @@ function IndividualsTab() {
               </tbody>
             </table>
           </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============== People Lookup Tab (TruePeopleSearch / ThatsThem style) ==============
+
+type LookupHit = {
+  source_url: string;
+  source_title?: string;
+  snippet?: string;
+  source_name?: string;
+};
+
+function PeopleLookupTab() {
+  const lookup = useServerFn(runPeopleLookup);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [country, setCountry] = useState<"US" | "CA">("US");
+  const [hits, setHits] = useState<LookupHit[] | null>(null);
+  const [meta, setMeta] = useState<{ source: string; built_query: string } | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => lookup({ data: { name, phone, address, city, state, country } }),
+    onSuccess: (res: any) => {
+      setHits(res.hits ?? []);
+      setMeta({ source: res.source, built_query: res.built_query });
+      if (!res.hits?.length) toast.message("No matches found — try adding a city/state or a phone.");
+    },
+    onError: (e: any) => toast.error(e?.message || "Lookup failed"),
+  });
+
+  const canSubmit = !!(name.trim() || phone.trim() || address.trim());
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] h-full">
+      <div className="bg-card/40 border-r border-border p-4 md:p-6 space-y-6 overflow-y-auto">
+        <Card className="p-6 rounded-2xl space-y-5">
+          <div>
+            <h2 className="text-lg font-semibold" style={{ fontFamily: "Sora" }}>People Lookup</h2>
+            <p className="text-xs text-muted-foreground">
+              Reverse-search individuals across TruePeopleSearch, ThatsThem, Whitepages and other
+              public directories. Fill any combination of name, phone, or address.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Full Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="John Smith" className="h-11" />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" className="h-11" />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Street Address</Label>
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" className="h-11" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">City</Label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Austin" className="h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">State</Label>
+              <Input value={state} onChange={(e) => setState(e.target.value)} placeholder="TX" className="h-11" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
+            <Select value={country} onValueChange={(v) => setCountry(v as "US" | "CA")}>
+              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="US">United States</SelectItem>
+                <SelectItem value="CA">Canada</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            className="w-full h-12 text-sm shadow-primary-glow"
+            disabled={!canSubmit || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <SearchIcon className="w-4 h-4 mr-2" />}
+            Search People
+          </Button>
+
+          {meta && (
+            <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+              Source: <span className="text-foreground/80">{meta.source}</span>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-5 space-y-2">
+          <h3 className="font-semibold text-sm" style={{ fontFamily: "Sora" }}>How it works</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            We build a targeted query against public people-search directories
+            (TruePeopleSearch, ThatsThem, Whitepages, Spokeo, Radaris, Canada411…)
+            and return the pages that match. Click a result to open the source
+            page for the phone, address, and relatives. Uses your Serper key
+            when available; otherwise falls back to free DuckDuckGo search.
+          </p>
+        </Card>
+      </div>
+
+      <div className="p-4 md:p-6 space-y-4 overflow-y-auto">
+        {hits === null && (
+          <Card className="p-12 text-center">
+            <UserSearch className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
+            <h3 className="font-semibold mb-1" style={{ fontFamily: "Sora" }}>Look up any person</h3>
+            <p className="text-sm text-muted-foreground">
+              Enter a name, phone number, or address to find matching people-search pages.
+            </p>
+          </Card>
+        )}
+        {hits && hits.length === 0 && (
+          <Card className="p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              No matches found. Try adding a city/state, or search by phone number.
+            </p>
+          </Card>
+        )}
+        {hits && hits.length > 0 && (
+          <div className="space-y-3">
+            {hits.map((h, i) => (
+              <Card key={i} className="p-4 hover:border-primary/40 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={h.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-primary hover:underline break-words"
+                    >
+                      {h.source_title || h.source_url}
+                    </a>
+                    {h.source_name && (
+                      <div className="mt-0.5">
+                        <Badge variant="outline" className="text-[10px]">{h.source_name}</Badge>
+                      </div>
+                    )}
+                    {h.snippet && (
+                      <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{h.snippet}</p>
+                    )}
+                  </div>
+                  <a
+                    href={h.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-md border border-border hover:border-primary/40 hover:bg-accent/30 text-xs"
+                  >
+                    Open <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </div>
