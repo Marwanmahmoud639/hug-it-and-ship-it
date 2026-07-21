@@ -91,7 +91,9 @@ function Login() {
       email: addr,
       options: {
         shouldCreateUser: isOwner, // only the product owner can be created via OTP
-        emailRedirectTo: window.location.origin + "/dashboard",
+        // NO emailRedirectTo — omitting it makes Supabase send a code-only email
+        // (single-use 6-digit OTP) instead of a magic link. The user types the
+        // code back into the form and we verify with verifyOtp below.
       },
     });
     if (error) {
