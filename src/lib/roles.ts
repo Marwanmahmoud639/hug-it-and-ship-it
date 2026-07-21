@@ -49,7 +49,7 @@ export function can(role: Role | null | undefined, cap: Capability): boolean {
 export type SectionKey =
   | "dashboard" | "pipeline" | "inbox" | "contacts" | "discovery" | "areas"
   | "campaigns" | "workflows" | "automations" | "proposals" | "monitors"
-  | "portals" | "analytics" | "team" | "settings";
+  | "portals" | "analytics" | "team" | "settings" | "ai_caller";
 
 export const SECTION_CATALOG: { key: SectionKey; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
@@ -64,6 +64,7 @@ export const SECTION_CATALOG: { key: SectionKey; label: string }[] = [
   { key: "proposals", label: "Proposals" },
   { key: "monitors", label: "Monitors" },
   { key: "portals", label: "Portals" },
+  { key: "ai_caller", label: "AI Caller" },
   { key: "analytics", label: "Analytics" },
   { key: "team", label: "Team" },
   { key: "settings", label: "Settings" },
