@@ -24,6 +24,8 @@ export function DiscoveryCreditsBadge() {
   const used = Number((team as any)?.credits_used ?? 0);
   const remaining = Math.max(0, total - used);
   const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
+  const fmt = (n: number) =>
+    Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
   const tone =
     pct >= 100 ? "text-red-500 border-red-500/40 bg-red-500/10"
     : pct >= 90 ? "text-amber-500 border-amber-500/40 bg-amber-500/10"
