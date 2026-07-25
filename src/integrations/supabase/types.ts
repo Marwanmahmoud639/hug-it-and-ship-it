@@ -2366,6 +2366,59 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          business_name: string | null
+          connected_apis: Json
+          created_at: string
+          current_step: number
+          domain: string | null
+          firmographics: Json | null
+          personas: Json | null
+          sample_leads: Json | null
+          scan_result: Json | null
+          signal_brief: Json | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_name?: string | null
+          connected_apis?: Json
+          created_at?: string
+          current_step?: number
+          domain?: string | null
+          firmographics?: Json | null
+          personas?: Json | null
+          sample_leads?: Json | null
+          scan_result?: Json | null
+          signal_brief?: Json | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_name?: string | null
+          connected_apis?: Json
+          created_at?: string
+          current_step?: number
+          domain?: string | null
+          firmographics?: Json | null
+          personas?: Json | null
+          sample_leads?: Json | null
+          scan_result?: Json | null
+          signal_brief?: Json | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number | null
@@ -2526,6 +2579,7 @@ export type Database = {
           seats: number
           slug: string
           sort_order: number
+          trial_days: number
           updated_at: string
           whop_checkout_url: string | null
           whop_plan_id: string | null
@@ -2540,6 +2594,7 @@ export type Database = {
           seats?: number
           slug: string
           sort_order?: number
+          trial_days?: number
           updated_at?: string
           whop_checkout_url?: string | null
           whop_plan_id?: string | null
@@ -2554,6 +2609,7 @@ export type Database = {
           seats?: number
           slug?: string
           sort_order?: number
+          trial_days?: number
           updated_at?: string
           whop_checkout_url?: string | null
           whop_plan_id?: string | null
@@ -3932,12 +3988,22 @@ export type Database = {
           discovery_monthly_limit: number
           foundation_owner_id: string | null
           id: string
+          ideal_customer: Json
           name: string
+          onboarding_completed_at: string | null
           owner_id: string
           parent_team_id: string | null
           plan: Database["public"]["Enums"]["plan_tier"]
+          plan_status: string
           seat_limit: number
+          sending_email_address: string | null
+          sending_email_provider: string | null
           subdomain: string | null
+          trial_discovery_limit: number
+          trial_ends_at: string | null
+          trial_message_limit: number
+          trial_pipeline_limit: number
+          trial_started_at: string | null
           white_label_color: string | null
           white_label_logo: string | null
           white_label_name: string | null
@@ -3951,12 +4017,22 @@ export type Database = {
           discovery_monthly_limit?: number
           foundation_owner_id?: string | null
           id?: string
+          ideal_customer?: Json
           name: string
+          onboarding_completed_at?: string | null
           owner_id: string
           parent_team_id?: string | null
           plan?: Database["public"]["Enums"]["plan_tier"]
+          plan_status?: string
           seat_limit?: number
+          sending_email_address?: string | null
+          sending_email_provider?: string | null
           subdomain?: string | null
+          trial_discovery_limit?: number
+          trial_ends_at?: string | null
+          trial_message_limit?: number
+          trial_pipeline_limit?: number
+          trial_started_at?: string | null
           white_label_color?: string | null
           white_label_logo?: string | null
           white_label_name?: string | null
@@ -3970,12 +4046,22 @@ export type Database = {
           discovery_monthly_limit?: number
           foundation_owner_id?: string | null
           id?: string
+          ideal_customer?: Json
           name?: string
+          onboarding_completed_at?: string | null
           owner_id?: string
           parent_team_id?: string | null
           plan?: Database["public"]["Enums"]["plan_tier"]
+          plan_status?: string
           seat_limit?: number
+          sending_email_address?: string | null
+          sending_email_provider?: string | null
           subdomain?: string | null
+          trial_discovery_limit?: number
+          trial_ends_at?: string | null
+          trial_message_limit?: number
+          trial_pipeline_limit?: number
+          trial_started_at?: string | null
           white_label_color?: string | null
           white_label_logo?: string | null
           white_label_name?: string | null
@@ -4037,6 +4123,41 @@ export type Database = {
             foreignKeyName: "training_sessions_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trial_usage: {
+        Row: {
+          created_at: string
+          discovery_used: number
+          messages_used: number
+          pipeline_used: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discovery_used?: number
+          messages_used?: number
+          pipeline_used?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discovery_used?: number
+          messages_used?: number
+          pipeline_used?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_usage_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -4390,12 +4511,22 @@ export type Database = {
           discovery_monthly_limit: number
           foundation_owner_id: string | null
           id: string
+          ideal_customer: Json
           name: string
+          onboarding_completed_at: string | null
           owner_id: string
           parent_team_id: string | null
           plan: Database["public"]["Enums"]["plan_tier"]
+          plan_status: string
           seat_limit: number
+          sending_email_address: string | null
+          sending_email_provider: string | null
           subdomain: string | null
+          trial_discovery_limit: number
+          trial_ends_at: string | null
+          trial_message_limit: number
+          trial_pipeline_limit: number
+          trial_started_at: string | null
           white_label_color: string | null
           white_label_logo: string | null
           white_label_name: string | null
@@ -4459,12 +4590,22 @@ export type Database = {
           discovery_monthly_limit: number
           foundation_owner_id: string | null
           id: string
+          ideal_customer: Json
           name: string
+          onboarding_completed_at: string | null
           owner_id: string
           parent_team_id: string | null
           plan: Database["public"]["Enums"]["plan_tier"]
+          plan_status: string
           seat_limit: number
+          sending_email_address: string | null
+          sending_email_provider: string | null
           subdomain: string | null
+          trial_discovery_limit: number
+          trial_ends_at: string | null
+          trial_message_limit: number
+          trial_pipeline_limit: number
+          trial_started_at: string | null
           white_label_color: string | null
           white_label_logo: string | null
           white_label_name: string | null
