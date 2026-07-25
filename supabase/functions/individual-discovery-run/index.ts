@@ -509,32 +509,34 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
     if (await checkCancelled()) return;
     const tasks: Promise<{ name: string; items: Individual[] }>[] = [];
 
+    const serperKeyOpt: string | null = (settings?.serper_api_key as string | undefined) || null;
+
     if (platforms.includes("linkedin")) {
       if (settings?.apollo_key) {
         tasks.push(queryLinkedIn(keyword, location, roles, settings.apollo_key)
           .then((items) => ({ name: "linkedin", items }))
           .catch((e) => { console.error("linkedin failed", e); sources_failed["linkedin"] = String(e); return { name: "linkedin", items: [] }; }));
-      } else if (settings?.serper_api_key) {
-        tasks.push(querySerperIndividuals(keyword, location, "linkedin", settings.serper_api_key)
+      } else {
+        tasks.push(querySerperIndividuals(keyword, location, "linkedin", serperKeyOpt)
           .then((items) => ({ name: "linkedin", items })));
-      } else sources_failed["linkedin"] = "no api key configured";
+      }
     }
     if (platforms.includes("facebook")) {
       if (settings?.facebook_api_key) {
         tasks.push(queryFacebook(keyword, location, roles, settings.facebook_api_key)
           .then((items) => ({ name: "facebook", items }))
           .catch((e) => { console.error("facebook failed", e); sources_failed["facebook"] = String(e); return { name: "facebook", items: [] }; }));
-      } else if (settings?.serper_api_key) {
-        tasks.push(querySerperIndividuals(keyword, location, "facebook", settings.serper_api_key)
+      } else {
+        tasks.push(querySerperIndividuals(keyword, location, "facebook", serperKeyOpt)
           .then((items) => ({ name: "facebook", items })));
-      } else sources_failed["facebook"] = "no api key configured";
+      }
     }
-    if (platforms.includes("twitter") && settings?.serper_api_key) {
-      tasks.push(querySerperIndividuals(keyword, location, "twitter", settings.serper_api_key)
+    if (platforms.includes("twitter")) {
+      tasks.push(querySerperIndividuals(keyword, location, "twitter", serperKeyOpt)
           .then((items) => ({ name: "twitter", items })));
     }
-    if (platforms.includes("instagram") && settings?.serper_api_key) {
-      tasks.push(querySerperIndividuals(keyword, location, "instagram", settings.serper_api_key)
+    if (platforms.includes("instagram")) {
+      tasks.push(querySerperIndividuals(keyword, location, "instagram", serperKeyOpt)
           .then((items) => ({ name: "instagram", items })));
     }
     if (platforms.includes("reddit")) {
@@ -544,12 +546,11 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         .catch((e) => { console.error("reddit failed", e); sources_failed["reddit"] = String(e); return { name: "reddit", items: [] }; }));
     }
     if (platforms.includes("google")) {
-      if (settings?.serper_api_key) {
-        tasks.push(queryGooglePeople(keyword, location, settings.serper_api_key)
-          .then((items) => ({ name: "google", items }))
-          .catch((e) => { console.error("google failed", e); sources_failed["google"] = String(e); return { name: "google", items: [] }; }));
-      } else sources_failed["google"] = "no api key configured";
+      tasks.push(queryGooglePeople(keyword, location, serperKeyOpt)
+        .then((items) => ({ name: "google", items }))
+        .catch((e) => { console.error("google failed", e); sources_failed["google"] = String(e); return { name: "google", items: [] }; }));
     }
+
 
     const settled = await Promise.allSettled(tasks);
     if (await checkCancelled()) return;
