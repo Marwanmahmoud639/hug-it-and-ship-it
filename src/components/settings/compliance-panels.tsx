@@ -129,6 +129,8 @@ export function EmailInfraPanel() {
   return (
     <div className="space-y-5">
       <ConnectedEmailAccounts />
+      <EmailWarmupPanel />
+
       <Card className="p-6 bg-card space-y-5">
       <div>
         <h3 className="font-semibold text-sm mb-3">Dedicated Sending Domains</h3>
