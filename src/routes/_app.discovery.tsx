@@ -563,12 +563,28 @@ function Stat({ label, value }: { label: string; value: any }) {
 // ============== Individuals Tab (inlined) ==============
 
 const IND_ROLES_PRESET = ["Owner", "CEO", "Founder", "Director", "Manager", "Partner"];
-const IND_PLATFORMS = [
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "facebook", label: "Facebook" },
-  { id: "reddit", label: "Reddit" },
-  { id: "google", label: "Google" },
-] as const;
+// Always run every free platform when the user hits Find Individuals.
+const IND_ALL_PLATFORMS = ["linkedin", "facebook", "reddit", "google"] as const;
+
+const US_STATES: { code: string; name: string }[] = [
+  { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" }, { code: "CA", name: "California" }, { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" }, { code: "DE", name: "Delaware" }, { code: "DC", name: "District of Columbia" },
+  { code: "FL", name: "Florida" }, { code: "GA", name: "Georgia" }, { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" }, { code: "IL", name: "Illinois" }, { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" }, { code: "KS", name: "Kansas" }, { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" }, { code: "ME", name: "Maine" }, { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" }, { code: "MI", name: "Michigan" }, { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" }, { code: "MO", name: "Missouri" }, { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" }, { code: "NV", name: "Nevada" }, { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" }, { code: "NM", name: "New Mexico" }, { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" }, { code: "ND", name: "North Dakota" }, { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" }, { code: "OR", name: "Oregon" }, { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" }, { code: "SC", name: "South Carolina" }, { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" }, { code: "TX", name: "Texas" }, { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" }, { code: "VA", name: "Virginia" }, { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" }, { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" },
+];
 
 function indStatusClass(s: string) {
   if (s === "complete") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
@@ -583,21 +599,39 @@ function IndividualsTab() {
   const qc = useQueryClient();
   const start = useServerFn(startIndividualDiscovery);
   const cancel = useServerFn(cancelIndividualSearch);
-  const [keyword, setKeyword] = useState("");
-  const [location, setLocation] = useState("");
-  const [platforms, setPlatforms] = useState<string[]>(["linkedin", "facebook", "google"]);
+  const [title, setTitle] = useState("");
+  const [city, setCity] = useState("");
+  const [stateCode, setStateCode] = useState("");
+  const [industry, setIndustry] = useState<string>("");
   const [roles, setRoles] = useState<string[]>(["Owner", "CEO", "Founder"]);
   const [customRole, setCustomRole] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  // Compose the payload the existing edge pipeline expects: keyword +
+  // location string. Industry hints steer platform queries toward the right
+  // niche (e.g. "wholesaler real estate cash buyer investor" in "Houston, TX").
+  const industryOpt = DISCOVERY_INDUSTRIES.find(i => i.value === industry) || null;
+  const stateName = US_STATES.find(s => s.code === stateCode)?.name || "";
+  const composedKeyword = [title.trim(), industryOpt?.hint?.split(",")[0]?.trim() || industryOpt?.label || ""]
+    .filter(Boolean).join(" ").trim();
+  const composedLocation = [city.trim(), stateName].filter(Boolean).join(", ");
+
+  const canSubmit = !!title.trim() && !!city.trim() && !!stateCode && !!industry;
+
   const mutation = useMutation({
-    mutationFn: () => start({ data: { keyword, location, platforms: platforms as any, roles } }),
+    mutationFn: () => start({ data: {
+      keyword: composedKeyword,
+      location: composedLocation,
+      platforms: [...IND_ALL_PLATFORMS] as any,
+      roles,
+    } }),
     onSuccess: (res) => {
       setActiveId(res.searchId);
       toast.success("Individual discovery started");
     },
     onError: (e: any) => toast.error(e.message || "Failed to start"),
   });
+
 
   const { data: search } = useQuery({
     queryKey: ["ind-search", activeId],
