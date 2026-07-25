@@ -57,12 +57,13 @@ function extractPhones(text: string): string[] {
   return Array.from(out);
 }
 
-// ─── FREE skip-trace for an individual (Serper + Firecrawl, global) ──────────
+// ─── FREE skip-trace for an individual (Serper if present, DDG fallback) ────
 async function freeSkiptraceIndividual(
   args: { name: string; company?: string; city?: string; state?: string; country?: string },
   serperKey: string,
   firecrawlKey: string | null,
 ): Promise<{ phones: Map<string, Set<string>>; emails: Map<string, Set<string>> }> {
+
   const EMAIL_RX = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
   const JUNK_EMAIL_RX = /example\.com|sentry|wixpress|cloudflare|domain\.com|googleapis|schema\.org|w3\.org|placeholder|noreply|no-reply|mailer-daemon/i;
   const JUNK_DOMAIN_RX = /facebook\.com|linkedin\.com|instagram\.com|twitter\.com|x\.com|youtube\.com|google\.com|bing\.com|yahoo\.com|reddit\.com|wikipedia\.org|github\.com|pinterest\.com|tiktok\.com|apple\.com|microsoft\.com|amazon\.com/i;
@@ -89,33 +90,26 @@ async function freeSkiptraceIndividual(
 
   for (const q of queries) {
     try {
-      const ctl = new AbortController();
-      const to = setTimeout(() => ctl.abort(), 6000);
-      const res = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, num: 10 }),
-        signal: ctl.signal,
-      });
-      clearTimeout(to);
-      if (!res.ok) continue;
-      const data = await res.json();
-      for (const r of (data.organic || []) as any[]) {
+      const organic = await unifiedSearch(q, serperKey || null, 10);
+      const providerLabel = serperKey ? "serper_web" : "ddg_web";
+      for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
-        for (const ph of extractPhones(blob)) addPhone(ph, "serper_web");
-        for (const m of blob.matchAll(EMAIL_RX)) addEmail(m[0], "serper_web");
+        // Strict identity gate: only accept phones/emails from pages whose
+        // title/snippet mentions this person + (company OR city).
+        if (!strictIdentityMatch(`${blob} ${r.link || ""}`, args.name, args.company, args.city)) continue;
+        for (const ph of extractPhones(blob)) addPhone(ph, providerLabel);
+        for (const m of blob.matchAll(EMAIL_RX)) addEmail(m[0], providerLabel);
       }
-      const kgBlob = JSON.stringify(data.knowledgeGraph || data.answerBox || {});
-      for (const ph of extractPhones(kgBlob)) addPhone(ph, "serper_kg");
-      for (const m of kgBlob.matchAll(EMAIL_RX)) addEmail(m[0], "serper_kg");
 
       if (firecrawlKey) {
         const urls: string[] = [];
-        for (const r of (data.organic || []) as any[]) {
+        for (const r of organic) {
           if (!r.link) continue;
           try {
             const host = new URL(r.link).hostname.toLowerCase();
             if (JUNK_DOMAIN_RX.test(host) || PEOPLE_SEARCH_RX.test(host)) continue;
+            // Only crawl pages whose SERP snippet already passes strict match.
+            if (!strictIdentityMatch(`${r.title || ""} ${r.snippet || ""} ${r.link}`, args.name, args.company, args.city)) continue;
             urls.push(r.link);
           } catch { /* skip */ }
         }
@@ -130,6 +124,8 @@ async function freeSkiptraceIndividual(
             const sd = await sr.json();
             const md: string = sd?.data?.markdown || "";
             if (!md || md.length < 50) continue;
+            // Verify person's name still appears in the crawled body.
+            if (!strictIdentityMatch(md, args.name, args.company, args.city)) continue;
             for (const ph of extractPhones(md)) addPhone(ph, "firecrawl_web");
             for (const m of md.matchAll(EMAIL_RX)) addEmail(m[0], "firecrawl_web");
           } catch { /* skip page */ }
@@ -139,9 +135,10 @@ async function freeSkiptraceIndividual(
     } catch { /* next query */ }
   }
   return { phones, emails };
+
 }
 
-// ─── Social profile lookup (Serper) ───────────────────────────────────────────
+// ─── Social profile lookup (Serper + DDG fallback, strict identity) ─────────
 const SOCIAL_PLATFORMS = [
   { key: "facebook_url" as const, site: "facebook.com", hostRx: /(^|\.)facebook\.com$/i },
   { key: "instagram_url" as const, site: "instagram.com", hostRx: /(^|\.)instagram\.com$/i },
@@ -149,44 +146,115 @@ const SOCIAL_PLATFORMS = [
   { key: "youtube_url" as const, site: "youtube.com", hostRx: /(^|\.)youtube\.com$/i },
 ];
 
-async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Promise<string | null> {
+// Strict identity match: require first + last name AND (company OR city)
+// in the title/snippet/path. Prevents wrong profiles with common names.
+function strictIdentityMatch(
+  hay: string,
+  fullName: string,
+  company: string | undefined,
+  city: string | undefined,
+): boolean {
+  const h = hay.toLowerCase();
+  const parts = fullName.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+  if (parts.length < 2) return false;
+  if (!h.includes(parts[0]) || !h.includes(parts[parts.length - 1])) return false;
+  const comp = (company || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const cty = (city || "").toLowerCase().trim();
+  const compTokens = comp.split(/\s+/).filter(w => w.length >= 3 && !["llc","inc","the","and","group","company","co"].includes(w));
+  const compHit = compTokens.length > 0 && compTokens.some(t => h.includes(t));
+  const cityHit = cty.length >= 3 && h.includes(cty);
+  return compHit || cityHit;
+}
+
+// DuckDuckGo HTML fallback so free path runs with zero API keys.
+async function duckSearchOrganic(query: string, num = 10): Promise<{ title: string; snippet: string; link: string }[]> {
   try {
     const ctl = new AbortController();
-    const to = setTimeout(() => ctl.abort(), 5000);
-    const res = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ q: query, num: 5 }),
+    const to = setTimeout(() => ctl.abort(), 7000);
+    const res = await fetch(`https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "Accept-Language": "en-US,en",
+      },
       signal: ctl.signal,
     });
     clearTimeout(to);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const organic = (data.organic || []) as { link?: string }[];
-    for (const o of organic) {
-      if (!o.link) continue;
+    if (!res.ok) return [];
+    const html = await res.text();
+    const out: { title: string; snippet: string; link: string }[] = [];
+    const rx = /<a[^>]+class="[^"]*result__a[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+    let m: RegExpExecArray | null;
+    const strip = (s: string) => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    while ((m = rx.exec(html)) !== null) {
+      let href = m[1];
       try {
-        const h = new URL(o.link).hostname;
-        if (hostRx.test(h)) return o.link;
-      } catch { /* ignore */ }
+        const u = new URL(href, "https://duckduckgo.com");
+        const t = u.searchParams.get("uddg");
+        if (t) href = decodeURIComponent(t);
+      } catch { /* keep href */ }
+      out.push({ link: href, title: strip(m[2]), snippet: strip(m[3]) });
+      if (out.length >= num) break;
     }
-    return null;
+    return out;
   } catch {
-    return null;
+    return [];
   }
+}
+
+async function unifiedSearch(query: string, serperKey: string | null, num = 10): Promise<{ title: string; snippet: string; link: string }[]> {
+  if (serperKey) {
+    try {
+      const ctl = new AbortController();
+      const to = setTimeout(() => ctl.abort(), 6000);
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q: query, num }),
+        signal: ctl.signal,
+      });
+      clearTimeout(to);
+      if (res.ok) {
+        const j = await res.json();
+        const org = (j.organic || []).map((o: any) => ({ title: o.title || "", snippet: o.snippet || "", link: o.link || "" }));
+        if (org.length) return org;
+      }
+    } catch { /* fall through */ }
+  }
+  return duckSearchOrganic(query, num);
+}
+
+async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Promise<string | null> {
+  const results = await unifiedSearch(query, apiKey || null, 5);
+  for (const o of results) {
+    if (!o.link) continue;
+    try { if (hostRx.test(new URL(o.link).hostname)) return o.link; } catch { /* ignore */ }
+  }
+  return null;
 }
 
 async function enrichSocials(
   fullName: string | undefined,
   company: string | undefined,
   serperKey: string | undefined,
+  city?: string | undefined,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
-  if (!serperKey || !fullName) return {};
-  const q = `"${fullName}"${company ? ` "${company}"` : ""}`;
+  if (!fullName) return {};
+  const q = `"${fullName}"${company ? ` "${company}"` : ""}${city ? ` "${city}"` : ""}`;
   const results = await Promise.allSettled(
-    SOCIAL_PLATFORMS.map((p) =>
-      serperTopUrl(`site:${p.site} ${q}`, serperKey, p.hostRx).then((url) => ({ key: p.key, url })),
-    ),
+    SOCIAL_PLATFORMS.map(async (p) => {
+      const items = await unifiedSearch(`site:${p.site} ${q}`, serperKey || null, 8);
+      for (const it of items) {
+        if (!it.link) continue;
+        try {
+          const url = new URL(it.link);
+          if (!p.hostRx.test(url.hostname)) continue;
+          const hay = `${it.title} ${it.snippet} ${url.pathname}`;
+          if (!strictIdentityMatch(hay, fullName, company, city)) continue;
+          return { key: p.key, url: it.link as string | null };
+        } catch { /* ignore */ }
+      }
+      return { key: p.key, url: null as string | null };
+    }),
   );
   const out: Record<string, string> = {};
   for (const r of results) {
@@ -194,6 +262,7 @@ async function enrichSocials(
   }
   return out;
 }
+
 
 async function queryLinkedIn(keyword: string, location: string, roles: string[], apiKey: string): Promise<Individual[]> {
   const res = await fetch("https://api.apollo.io/api/v1/mixed_people/api_search", {
@@ -280,74 +349,92 @@ async function queryReddit(keyword: string, subreddits: string[], limit = 30): P
   }
 }
 
-async function queryGooglePeople(keyword: string, location: string, apiKey: string): Promise<Individual[]> {
-  const res = await fetch("https://google.serper.dev/search", {
-    method: "POST",
-    headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: `${keyword} ${location}`, type: "profile", num: 30 }),
-  });
-  if (!res.ok) throw new Error(`serper/google ${res.status}`);
-  const data = await res.json();
-  const profiles = data.profiles || data.peopleResults || [];
-  return profiles.slice(0, 30).map((p: any): Individual => ({
-    full_name: p.name || p.title || "Unknown",
-    first_name: (p.name || "").split(" ")[0],
-    last_name: (p.name || "").split(" ").slice(1).join(" "),
-    role: p.description || p.subtitle || "Unknown",
-    city: p.location || location.split(",")[0]?.trim(),
-    confidence: 50,
-    sources: ["google"],
-    raw: { google_profile: p },
-  }));
+async function queryGooglePeople(keyword: string, location: string, apiKey: string | null): Promise<Individual[]> {
+  // "profile" answer box only comes from Serper; when we don't have a key we
+  // fall through to organic web results via DDG below.
+  if (apiKey) {
+    try {
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q: `${keyword} ${location}`, type: "profile", num: 30 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const profiles = data.profiles || data.peopleResults || [];
+        if (profiles.length) {
+          return profiles.slice(0, 30).map((p: any): Individual => ({
+            full_name: p.name || p.title || "Unknown",
+            first_name: (p.name || "").split(" ")[0],
+            last_name: (p.name || "").split(" ").slice(1).join(" "),
+            role: p.description || p.subtitle || "Unknown",
+            city: p.location || location.split(",")[0]?.trim(),
+            confidence: 50,
+            sources: ["google"],
+            raw: { google_profile: p },
+          }));
+        }
+      }
+    } catch { /* fall through to DDG */ }
+  }
+  // DDG fallback — extract name-shaped titles from organic results.
+  const items = await duckSearchOrganic(`${keyword} ${location} owner OR founder OR broker`, 20);
+  const out: Individual[] = [];
+  for (const r of items) {
+    const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
+    const cand = titleParts[0] || "";
+    const words = cand.trim().split(/\s+/);
+    if (words.length < 2 || words.length > 5 || /^[\d\W]+$/.test(cand)) continue;
+    out.push({
+      full_name: cand, first_name: words[0], last_name: words.slice(1).join(" "),
+      role: "Unknown", city: location.split(",")[0]?.trim(),
+      confidence: 40, sources: ["ddg_google"], raw: { ddg: r },
+    });
+  }
+  return out.slice(0, 25);
 }
 
-async function querySerperIndividuals(keyword: string, location: string, platform: "linkedin" | "facebook" | "twitter" | "instagram", apiKey: string): Promise<Individual[]> {
+async function querySerperIndividuals(keyword: string, location: string, platform: "linkedin" | "facebook" | "twitter" | "instagram", apiKey: string | null): Promise<Individual[]> {
   const siteMap = {
     linkedin: "site:linkedin.com/in",
-    facebook: "site:facebook.com", // includes groups and profiles
+    facebook: "site:facebook.com",
     twitter: "site:twitter.com OR site:x.com",
-    instagram: "site:instagram.com"
+    instagram: "site:instagram.com",
   };
   const q = `${siteMap[platform]} "${keyword}"${location ? ` "${location}"` : ""}`;
   try {
-    const res = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ q, num: 20 }),
-    });
-    if (!res.ok) throw new Error(`serper/${platform} ${res.status}`);
-    const data = await res.json();
-    const organic = data.organic || [];
+    const organic = await unifiedSearch(q, apiKey || null, 20);
     const individuals: Individual[] = [];
-    
     for (const r of organic) {
       const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
       const candidateName = titleParts[0] || "";
       const words = candidateName.trim().split(/\s+/);
       if (words.length < 2 || words.length > 5 || /^[\d\W]+$/.test(candidateName)) continue;
-      
+
       const ind: Individual = {
         full_name: candidateName,
         first_name: words[0],
         last_name: words.slice(1).join(" "),
         role: "Unknown",
-        confidence: 45,
-        sources: [`serper_${platform}`],
-        raw: { serper: r }
+        confidence: apiKey ? 45 : 38,
+        sources: [`${apiKey ? "serper" : "ddg"}_${platform}`],
+        raw: { search: r },
       };
-      
+
       if (platform === "linkedin") ind.linkedin_url = r.link;
       if (platform === "facebook") ind.facebook_url = r.link;
       if (platform === "twitter") ind.twitter_url = r.link;
       if (platform === "instagram") ind.instagram_url = r.link;
-      
+
       individuals.push(ind);
     }
     return individuals;
-  } catch (e) {
+  } catch {
     return [];
   }
 }
+
+
 
 async function geocodeLocation(location: string, googleMapsKey: string) {
   try {
@@ -422,32 +509,34 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
     if (await checkCancelled()) return;
     const tasks: Promise<{ name: string; items: Individual[] }>[] = [];
 
+    const serperKeyOpt: string | null = (settings?.serper_api_key as string | undefined) || null;
+
     if (platforms.includes("linkedin")) {
       if (settings?.apollo_key) {
         tasks.push(queryLinkedIn(keyword, location, roles, settings.apollo_key)
           .then((items) => ({ name: "linkedin", items }))
           .catch((e) => { console.error("linkedin failed", e); sources_failed["linkedin"] = String(e); return { name: "linkedin", items: [] }; }));
-      } else if (settings?.serper_api_key) {
-        tasks.push(querySerperIndividuals(keyword, location, "linkedin", settings.serper_api_key)
+      } else {
+        tasks.push(querySerperIndividuals(keyword, location, "linkedin", serperKeyOpt)
           .then((items) => ({ name: "linkedin", items })));
-      } else sources_failed["linkedin"] = "no api key configured";
+      }
     }
     if (platforms.includes("facebook")) {
       if (settings?.facebook_api_key) {
         tasks.push(queryFacebook(keyword, location, roles, settings.facebook_api_key)
           .then((items) => ({ name: "facebook", items }))
           .catch((e) => { console.error("facebook failed", e); sources_failed["facebook"] = String(e); return { name: "facebook", items: [] }; }));
-      } else if (settings?.serper_api_key) {
-        tasks.push(querySerperIndividuals(keyword, location, "facebook", settings.serper_api_key)
+      } else {
+        tasks.push(querySerperIndividuals(keyword, location, "facebook", serperKeyOpt)
           .then((items) => ({ name: "facebook", items })));
-      } else sources_failed["facebook"] = "no api key configured";
+      }
     }
-    if (platforms.includes("twitter") && settings?.serper_api_key) {
-      tasks.push(querySerperIndividuals(keyword, location, "twitter", settings.serper_api_key)
+    if (platforms.includes("twitter")) {
+      tasks.push(querySerperIndividuals(keyword, location, "twitter", serperKeyOpt)
           .then((items) => ({ name: "twitter", items })));
     }
-    if (platforms.includes("instagram") && settings?.serper_api_key) {
-      tasks.push(querySerperIndividuals(keyword, location, "instagram", settings.serper_api_key)
+    if (platforms.includes("instagram")) {
+      tasks.push(querySerperIndividuals(keyword, location, "instagram", serperKeyOpt)
           .then((items) => ({ name: "instagram", items })));
     }
     if (platforms.includes("reddit")) {
@@ -457,12 +546,11 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         .catch((e) => { console.error("reddit failed", e); sources_failed["reddit"] = String(e); return { name: "reddit", items: [] }; }));
     }
     if (platforms.includes("google")) {
-      if (settings?.serper_api_key) {
-        tasks.push(queryGooglePeople(keyword, location, settings.serper_api_key)
-          .then((items) => ({ name: "google", items }))
-          .catch((e) => { console.error("google failed", e); sources_failed["google"] = String(e); return { name: "google", items: [] }; }));
-      } else sources_failed["google"] = "no api key configured";
+      tasks.push(queryGooglePeople(keyword, location, serperKeyOpt)
+        .then((items) => ({ name: "google", items }))
+        .catch((e) => { console.error("google failed", e); sources_failed["google"] = String(e); return { name: "google", items: [] }; }));
     }
+
 
     const settled = await Promise.allSettled(tasks);
     if (await checkCancelled()) return;
@@ -495,15 +583,16 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
     const merged = Array.from(deduped.values());
     if (await checkCancelled()) return;
 
-    // Social enrichment via Serper (best-effort, parallel)
-    const serperKey = settings?.serper_api_key as string | undefined;
+    // Social enrichment + free skip-trace. Runs even without any API keys
+    // by falling back to DuckDuckGo scraping inside unifiedSearch/freeSkiptrace.
+    const serperKey = (settings?.serper_api_key as string | undefined) || "";
     const firecrawlKey = (settings?.firecrawl_api_key as string | undefined) || null;
-    if (serperKey) {
+    {
       const BATCH = 5;
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (ind) => {
-          const socials = await enrichSocials(ind.full_name, ind.company, serperKey);
+          const socials = await enrichSocials(ind.full_name, ind.company, serperKey, ind.city);
           if (socials.facebook_url) ind.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) ind.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) ind.twitter_url ||= socials.twitter_url;
@@ -511,7 +600,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         }));
       }
 
-      // FREE skip-trace: fill phone + verified email for each individual (global).
+      // FREE skip-trace: fill phone + verified email for each individual.
       const ST_BATCH = 4;
       for (let i = 0; i < merged.length; i += ST_BATCH) {
         if (await checkCancelled()) return;
@@ -536,6 +625,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         }));
       }
     }
+
 
     let mapCenterLat: number | null = null;
     let mapCenterLng: number | null = null;

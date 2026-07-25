@@ -67,14 +67,48 @@ const SOCIAL_PLATFORMS = [
   { key: "youtube_url" as const, site: "youtube.com", hostRx: /(^|\.)youtube\.com$/i },
 ];
 
-async function serperTopUrl(query: string, apiKey: string | null, hostRx: RegExp): Promise<string | null> {
+// Strict identity match: candidate must reference the person's name AND
+// (company OR city) inside the title/snippet/link path. Prevents attaching
+// random Facebook/Instagram/LinkedIn profiles that share a common name.
+function strictIdentityMatch(
+  hay: string,
+  fullName: string,
+  company: string | undefined,
+  city: string | undefined,
+): boolean {
+  const h = hay.toLowerCase();
+  const nameParts = fullName.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+  if (nameParts.length < 2) return false;
+  // Require first + last name to both appear.
+  const first = nameParts[0];
+  const last = nameParts[nameParts.length - 1];
+  if (!h.includes(first) || !h.includes(last)) return false;
+  const comp = (company || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const cty = (city || "").toLowerCase().trim();
+  const compTokens = comp.split(/\s+/).filter(w => w.length >= 3 && !["llc","inc","the","and","group","company","co"].includes(w));
+  const compHit = compTokens.length > 0 && compTokens.some(t => h.includes(t));
+  const cityHit = cty.length >= 3 && h.includes(cty);
+  return compHit || cityHit;
+}
+
+async function serperStrictMatchUrl(
+  query: string,
+  apiKey: string | null,
+  hostRx: RegExp,
+  fullName: string,
+  company: string | undefined,
+  city: string | undefined,
+): Promise<string | null> {
   try {
-    const { organic } = await webSearch(query, { serperKey: apiKey, num: 5, timeoutMs: 5000 });
+    const { organic } = await webSearch(query, { serperKey: apiKey, num: 8, timeoutMs: 5000 });
     for (const o of organic) {
       if (!o.link) continue;
       try {
-        const h = new URL(o.link).hostname;
-        if (hostRx.test(h)) return o.link;
+        const url = new URL(o.link);
+        if (!hostRx.test(url.hostname)) continue;
+        const hay = `${o.title || ""} ${o.snippet || ""} ${url.pathname}`;
+        if (!strictIdentityMatch(hay, fullName, company, city)) continue;
+        return o.link;
       } catch { /* ignore */ }
     }
     return null;
@@ -87,12 +121,14 @@ async function enrichSocials(
   fullName: string | undefined,
   company: string | undefined,
   serperKey: string | null | undefined,
+  city?: string | undefined,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
   if (!fullName) return {};
-  const q = `"${fullName}"${company ? ` "${company}"` : ""}`;
+  const q = `"${fullName}"${company ? ` "${company}"` : ""}${city ? ` "${city}"` : ""}`;
   const results = await Promise.allSettled(
     SOCIAL_PLATFORMS.map((p) =>
-      serperTopUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx).then((url) => ({ key: p.key, url })),
+      serperStrictMatchUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx, fullName, company, city)
+        .then((url) => ({ key: p.key, url })),
     ),
   );
   const out: Record<string, string> = {};
@@ -101,6 +137,7 @@ async function enrichSocials(
   }
   return out;
 }
+
 
 function normCompany(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
@@ -1341,12 +1378,13 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (b) => {
-          const socials = await enrichSocials(b.contact_name, b.name, serperKey);
+          const socials = await enrichSocials(b.contact_name, b.name, serperKey, b.city);
           if (socials.facebook_url) b.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) b.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) b.twitter_url ||= socials.twitter_url;
           if (socials.youtube_url) b.youtube_url ||= socials.youtube_url;
         }));
+
       }
     }
     for (const b of merged) {
