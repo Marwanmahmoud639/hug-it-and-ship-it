@@ -130,7 +130,8 @@ export function EmailInfraPanel() {
   return (
     <div className="space-y-5">
       <ConnectedEmailAccounts />
-      <EmailWarmupPanel />
+
+
 
       <Card className="p-6 bg-card space-y-5">
       <div>
