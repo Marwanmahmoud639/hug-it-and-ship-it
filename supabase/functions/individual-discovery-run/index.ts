@@ -567,15 +567,16 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
     const merged = Array.from(deduped.values());
     if (await checkCancelled()) return;
 
-    // Social enrichment via Serper (best-effort, parallel)
-    const serperKey = settings?.serper_api_key as string | undefined;
+    // Social enrichment + free skip-trace. Runs even without any API keys
+    // by falling back to DuckDuckGo scraping inside unifiedSearch/freeSkiptrace.
+    const serperKey = (settings?.serper_api_key as string | undefined) || "";
     const firecrawlKey = (settings?.firecrawl_api_key as string | undefined) || null;
-    if (serperKey) {
+    {
       const BATCH = 5;
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (ind) => {
-          const socials = await enrichSocials(ind.full_name, ind.company, serperKey);
+          const socials = await enrichSocials(ind.full_name, ind.company, serperKey, ind.city);
           if (socials.facebook_url) ind.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) ind.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) ind.twitter_url ||= socials.twitter_url;
@@ -583,7 +584,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         }));
       }
 
-      // FREE skip-trace: fill phone + verified email for each individual (global).
+      // FREE skip-trace: fill phone + verified email for each individual.
       const ST_BATCH = 4;
       for (let i = 0; i < merged.length; i += ST_BATCH) {
         if (await checkCancelled()) return;
@@ -608,6 +609,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         }));
       }
     }
+
 
     let mapCenterLat: number | null = null;
     let mapCenterLng: number | null = null;
