@@ -419,8 +419,8 @@ function Step7Connect({ progress, onBack, onNext }: any) {
     } catch (e: any) { toast.error(e?.message ?? "Gmail connect failed"); }
     finally { setBusy(false); }
   };
-  // silence unused warning
-  void startGmail;
+
+
 
   return (
     <Card className="p-8">
