@@ -1106,21 +1106,9 @@ async function runPipeline(searchId: string) {
     const keyword = search.keyword as string;
     const location = (search.location as string) || "";
 
-    // ── USA + Canada gate: bail out cleanly for unsupported regions ─────────
-    const country = resolveCountry(location);
-    if (!country) {
-      await SUPABASE.from("searches").update({
-        status: "failed",
-        error_text: "Discovery currently supports USA and Canada only. Please enter a US state/city or Canadian province/city.",
-        completed_at: new Date().toISOString(),
-      }).eq("id", searchId);
-      await logActivity(searchId, teamId, "business", "error", "🌎",
-        "Discovery is limited to USA and Canada. Update the location and try again.",
-        { percent: 100 });
-      return;
-    }
-    // overwrite countryHint downstream so scrapers stay in-region
-    const countryHint = country;
+    // ── US-only gate ────────────────────────────────────────────────────────
+    const country = resolveCountry(location) === "USA" ? "USA" : "USA"; // force US
+    const countryHint = "USA";
 
     async function checkCancelled(): Promise<boolean> {
       const { data } = await SUPABASE.from("searches").select("status").eq("id", searchId).single();
