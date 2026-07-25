@@ -21,6 +21,7 @@ type Plan = {
   features: string[];
   sort_order: number;
   whop_checkout_url: string | null;
+  trial_days: number | null;
 };
 
 function PricingPage() {
@@ -29,7 +30,7 @@ function PricingPage() {
   useEffect(() => {
     supabase
       .from("plans")
-      .select("slug, name, price_monthly, seats, features, sort_order, whop_checkout_url")
+      .select("slug, name, price_monthly, seats, features, sort_order, whop_checkout_url, trial_days")
       .eq("is_active", true)
       .order("sort_order")
       .then(({ data }) => setPlans((data as any) ?? []));
@@ -72,6 +73,11 @@ function PricingPage() {
                   )}
                   <h3 className="font-bold text-xl text-white">{p.name}</h3>
                   <p className="text-sm text-zinc-400 mt-1">{p.seats} seat{p.seats > 1 ? "s" : ""}</p>
+                  {p.trial_days && p.trial_days > 0 && (
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 text-xs font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {p.trial_days}-day free trial
+                    </div>
+                  )}
                   <div className="mt-6 flex items-baseline gap-1">
                     <span className="text-5xl font-black text-white">${Number(p.price_monthly)}</span>
                     <span className="text-zinc-500">/mo</span>

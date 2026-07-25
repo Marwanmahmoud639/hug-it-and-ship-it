@@ -12,10 +12,16 @@ import { AssistantBubble } from "@/components/assistant/AssistantBubble";
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
 function AppLayout() {
-  const { session, loading, role, isSuperAdmin } = useAuth();
+  const { session, loading, role, isSuperAdmin, team } = useAuth();
   const pathname = useRouterState({ select: s => s.location.pathname });
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   if (!session) return <Navigate to="/login" />;
+
+  // Force new signups through onboarding before seeing the app. Skip for super-admins.
+  if (!isSuperAdmin && team && !(team as any).onboarding_completed_at) {
+    return <Navigate to="/onboarding" />;
+  }
+
 
   // Super-admin-only routes (platform-level surfaces). Blocked for every other account.
   const superOnlyBlocked = ["/super-admin", "/agency"];

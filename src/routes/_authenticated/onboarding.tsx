@@ -71,7 +71,7 @@ function OnboardingPage() {
           <div className="text-xs text-muted-foreground">Step {step} of {STEPS.length} · {STEPS[step-1].name}</div>
         </div>
 
-        {step === 1 && <Step1Business progress={progress} onNext={(name) => goTo(2, { business_name: name })} />}
+        {step === 1 && <Step1Business progress={progress} onNext={(name: string) => goTo(2, { business_name: name })} />}
         {step === 2 && <Step2HowItWorks onBack={() => goTo(1)} onNext={() => goTo(3)} />}
         {step === 3 && <Step3Domain progress={progress} onBack={() => goTo(2)} onNext={() => { q.refetch(); setStep(4); }} />}
         {step === 4 && <Step4People progress={progress} onBack={() => goTo(3)} onNext={() => goTo(5)} />}
