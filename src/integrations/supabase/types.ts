@@ -4497,6 +4497,10 @@ export type Database = {
         }
       }
       clear_team_switch: { Args: never; Returns: undefined }
+      consume_trial_quota: {
+        Args: { _amount?: number; _kind: string; _team_id: string }
+        Returns: Json
+      }
       count_team_seats: { Args: { _team_id: string }; Returns: number }
       create_sub_account: {
         Args: {

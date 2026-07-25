@@ -96,6 +96,16 @@ export const sendSms = createServerFn({ method: "POST" })
     if (te) throw new Error(te.message);
     if (!thread) throw new Error("Thread not found");
 
+    const { data: quota } = await supabase.rpc("consume_trial_quota" as never, {
+      _team_id: thread.team_id, _kind: "message", _amount: 1,
+    } as never);
+    const q = quota as { ok: boolean; reason?: string; cap?: number } | null;
+    if (q && !q.ok) {
+      if (q.reason === "trial_expired") throw new Error("Your 3-day free trial has expired. Upgrade to keep sending messages.");
+      throw new Error(`Trial cap reached: you've sent all ${q.cap ?? 100} trial messages. Upgrade to continue.`);
+    }
+
+
     const { loadActiveProviderForTeam } = await import("@/lib/dialer/registry");
     const active = await loadActiveProviderForTeam(thread.team_id);
 
