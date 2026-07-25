@@ -494,6 +494,33 @@ export type Database = {
           },
         ]
       }
+      app_user_connections: {
+        Row: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_key_ciphertext?: string
+          connector_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       approved_emails: {
         Row: {
           approved_at: string
@@ -1703,6 +1730,7 @@ export type Database = {
       email_accounts: {
         Row: {
           api_key: string | null
+          app_user_connector: boolean
           created_at: string
           daily_limit: number
           from_email: string
@@ -1712,6 +1740,7 @@ export type Database = {
           label: string | null
           last_sent_date: string | null
           oauth_refresh_token: string | null
+          oauth_user_id: string | null
           provider: string
           sent_today: number
           smtp_host: string | null
@@ -1722,6 +1751,7 @@ export type Database = {
         }
         Insert: {
           api_key?: string | null
+          app_user_connector?: boolean
           created_at?: string
           daily_limit?: number
           from_email: string
@@ -1731,6 +1761,7 @@ export type Database = {
           label?: string | null
           last_sent_date?: string | null
           oauth_refresh_token?: string | null
+          oauth_user_id?: string | null
           provider: string
           sent_today?: number
           smtp_host?: string | null
@@ -1741,6 +1772,7 @@ export type Database = {
         }
         Update: {
           api_key?: string | null
+          app_user_connector?: boolean
           created_at?: string
           daily_limit?: number
           from_email?: string
@@ -1750,6 +1782,7 @@ export type Database = {
           label?: string | null
           last_sent_date?: string | null
           oauth_refresh_token?: string | null
+          oauth_user_id?: string | null
           provider?: string
           sent_today?: number
           smtp_host?: string | null

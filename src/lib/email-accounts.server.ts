@@ -52,7 +52,20 @@ async function sendViaBrevo(acct: Account, m: SendArgs) {
 }
 
 async function sendViaGmail(acct: Account, m: SendArgs) {
+  // App User Connector path: use the connected user's Gmail via Lovable connector gateway.
+  if ((acct as any).app_user_connector && (acct as any).oauth_user_id) {
+    const { sendMailAsUser } = await import("./gmail-send.server");
+    await sendMailAsUser((acct as any).oauth_user_id as string, {
+      to: m.to,
+      subject: m.subject,
+      html: m.html,
+      fromEmail: acct.from_email,
+      fromName: acct.from_name ?? undefined,
+    });
+    return;
+  }
   if (!acct.oauth_refresh_token) throw new Error("Gmail account not connected (missing refresh token)");
+
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error("Google OAuth client not configured on the server");

@@ -373,24 +373,54 @@ function Step6Brief({ progress, onBack, onNext }: any) {
 
 // ---------------- Step 7: connect APIs + sending email ----------------
 function Step7Connect({ progress, onBack, onNext }: any) {
-  const { session } = useAuth();
   const persist = useServerFn(saveSendingEmail);
   const [connected, setConnected] = useState<Record<string, boolean>>(progress?.connected_apis ?? {});
   const [busy, setBusy] = useState(false);
-  const userEmail = session?.user?.email ?? "";
-  const isGoogleUser = !!session?.user?.app_metadata?.providers?.includes?.("google") ||
-                       session?.user?.app_metadata?.provider === "google";
+  const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
+
+
+  // Check status on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getGmailStatus } = await import("@/lib/gmail.functions");
+        const status: any = await getGmailStatus();
+        if (status?.connected) {
+          setConnected(c => ({ ...c, gmail: true }));
+          setConnectedEmail(status.emailAddress ?? null);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const enableGmailSend = async () => {
-    if (!userEmail) return;
     setBusy(true);
     try {
-      await persist({ data: { provider: "gmail", address: userEmail } });
+      const [{ connectAppUser }, { startGmailConnect, saveGmailConnection }] = await Promise.all([
+        import("@/integrations/lovable/appUserConnectorClient"),
+        import("@/lib/gmail.functions"),
+      ]);
+      const result = await connectAppUser({
+        connectorId: "google_mail",
+        gatewayBaseUrl: "https://connector-gateway.lovable.dev",
+        start: async (targetOrigin) => await startGmailConnect({ data: { targetOrigin } }),
+      });
+      if (!result.success) { toast.error(result.error ?? "Gmail connect failed"); return; }
+      if (!result.connectionAPIKey) {
+        toast.message("Gmail connected without offline access — ask a workspace admin to enable offline access.");
+        return;
+      }
+      const saved: any = await saveGmailConnection({ data: { connectionAPIKey: result.connectionAPIKey } });
+      const email = saved?.emailAddress ?? null;
+      setConnectedEmail(email);
       setConnected(c => ({ ...c, gmail: true }));
-      toast.success("Gmail send connected");
-    } catch (e: any) { toast.error(e.message); }
+      if (email) await persist({ data: { provider: "gmail_app_user", address: email } });
+      toast.success(email ? `Gmail connected: ${email}` : "Gmail connected");
+    } catch (e: any) { toast.error(e?.message ?? "Gmail connect failed"); }
     finally { setBusy(false); }
   };
+
+
 
   return (
     <Card className="p-8">
@@ -401,9 +431,9 @@ function Step7Connect({ progress, onBack, onNext }: any) {
         <ConnectRow
           icon={<Mail className="w-5 h-5" />}
           name="Gmail (send outreach)"
-          desc={isGoogleUser ? `We'll send from ${userEmail}` : "Sign in with Google on your Account page to enable Gmail sending"}
+          desc={connected.gmail ? `Sending from ${connectedEmail ?? "your Gmail"}` : "Connect your Google account to send outreach from your Gmail"}
           connected={!!connected.gmail}
-          disabled={!isGoogleUser || busy}
+          disabled={busy}
           onClick={enableGmailSend}
         />
         <ConnectRow icon={<span className="font-bold text-sm">in</span>} name="LinkedIn API" desc="For DM outreach — add key in Settings > Social APIs (optional)" connected={false} disabled placeholder />
@@ -420,6 +450,7 @@ function Step7Connect({ progress, onBack, onNext }: any) {
     </Card>
   );
 }
+
 function ConnectRow({ icon, name, desc, connected, disabled, placeholder, onClick }: any) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg border">
