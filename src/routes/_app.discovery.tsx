@@ -684,8 +684,6 @@ function IndividualsTab() {
     return () => { supabase.removeChannel(ch); };
   }, [activeId, qc]);
 
-  const togglePlat = (id: string) =>
-    setPlatforms(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleRole = (r: string) =>
     setRoles(rs => rs.includes(r) ? rs.filter(x => x !== r) : [...rs, r]);
 
@@ -695,35 +693,61 @@ function IndividualsTab() {
         <Card className="p-6 rounded-2xl space-y-5">
           <div>
             <h2 className="text-lg font-semibold" style={{ fontFamily: "Sora" }}>Individual Discovery</h2>
-            <p className="text-xs text-muted-foreground">Find people by role across LinkedIn, Facebook, Reddit, and Google.</p>
+            <p className="text-xs text-muted-foreground">
+              Search by title + city + state + industry. Runs LinkedIn, Facebook, Reddit, and Google automatically.
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Keyword / Role</Label>
-            <KeywordAutocomplete value={keyword} onChange={setKeyword} placeholder="wholesaler, cash buyer" />
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title</Label>
+            <Input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="wholesaler, cash buyer, CEO"
+              className="h-10"
+            />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Location</Label>
-            <LocationAutocomplete value={location} onChange={setLocation} placeholder="Austin, TX  or  Florida" />
-          </div>
-
-
-          <div>
-            <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground">Platforms</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {IND_PLATFORMS.map(p => {
-                const on = platforms.includes(p.id);
-                return (
-                  <button key={p.id} type="button" onClick={() => togglePlat(p.id)}
-                    className={cn(
-                      "px-3 py-2 rounded-lg text-xs font-medium border transition-all active:scale-[0.97]",
-                      on ? "border-primary bg-primary/15 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                    )}>{p.label}</button>
-                );
-              })}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">City</Label>
+              <Input
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                placeholder="Houston"
+                className="h-10"
+              />
             </div>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">State</Label>
+              <Select value={stateCode} onValueChange={setStateCode}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {US_STATES.map(s => (
+                    <SelectItem key={s.code} value={s.code}>{s.name} ({s.code})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Industry</Label>
+            <Select value={industry} onValueChange={setIndustry}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Select an industry" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {DISCOVERY_INDUSTRIES.map(i => (
+                  <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {industryOpt?.hint && (
+              <p className="text-[11px] text-muted-foreground">Matches: {industryOpt.hint}</p>
+            )}
           </div>
 
           <div>
@@ -741,7 +765,6 @@ function IndividualsTab() {
                 );
               })}
             </div>
-            {/* Custom tags added by user */}
             {roles.filter(r => !IND_ROLES_PRESET.includes(r)).length > 0 && (
               <div className="flex flex-wrap gap-1 mb-2">
                 {roles.filter(r => !IND_ROLES_PRESET.includes(r)).map(r => (
@@ -786,12 +809,13 @@ function IndividualsTab() {
           </div>
 
           <Button className="w-full h-12 text-sm shadow-primary-glow"
-            disabled={!keyword || platforms.length === 0 || mutation.isPending}
+            disabled={!canSubmit || mutation.isPending}
             onClick={() => mutation.mutate()}>
             {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
             Find Individuals
           </Button>
         </Card>
+
 
         <Card className="p-5">
           <h3 className="font-semibold mb-3" style={{ fontFamily: "Sora" }}>Search History</h3>
