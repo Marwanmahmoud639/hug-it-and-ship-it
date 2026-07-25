@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { BOOKING_URL } from "@/lib/brand";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
@@ -13,9 +14,11 @@ import { ContactNotes } from "./contact-notes";
 import { CallHistoryList } from "./call-history-list";
 import { ContactTasks } from "./contact-tasks";
 import { LeadComposeDialog, LeadValidatePhoneDialog, LeadSocialLinks } from "./lead-quick-tools";
+import { retryDMSearch } from "@/lib/lead-tools.functions";
 import {
   Mail, Phone, Calendar, ExternalLink, PhoneCall, MessageSquare, Send,
   CalendarPlus, Pencil, ShieldAlert, UserPlus, Bot, MessageCircle, ShieldCheck,
+  Building2, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
