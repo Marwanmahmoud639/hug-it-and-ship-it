@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useServerFn } from "@tanstack/react-start";
 import { addSendingDomain, addInbox, listSendingDomains, verifyDns } from "@/lib/sending.functions";
 import { listEmailAccounts, addEmailAccount, updateEmailAccount, deleteEmailAccount, sendTestEmail } from "@/lib/email-accounts.functions";
+import { EmailWarmupPanel } from "@/components/settings/email-warmup-panel";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -129,6 +130,8 @@ export function EmailInfraPanel() {
   return (
     <div className="space-y-5">
       <ConnectedEmailAccounts />
+      <EmailWarmupPanel />
+
       <Card className="p-6 bg-card space-y-5">
       <div>
         <h3 className="font-semibold text-sm mb-3">Dedicated Sending Domains</h3>

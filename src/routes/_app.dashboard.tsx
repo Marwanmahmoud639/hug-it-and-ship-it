@@ -8,6 +8,7 @@ import {
   Sparkles, Linkedin, Instagram, Facebook, Phone,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { WarmupAlert } from "@/components/settings/email-warmup-panel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,8 @@ function Dashboard() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto page-in">
       <PageHeader title="Dashboard" greeting={`${greet()}${firstName ? `, ${firstName}` : ""}. Command your pipeline at a glance.`} />
+      <WarmupAlert />
+
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <StatCard accent="blue"    label="Total Prospects" value={stats.contacts} trend={12.4} spark={spark}            icon={<Users className="w-5 h-5" />} />

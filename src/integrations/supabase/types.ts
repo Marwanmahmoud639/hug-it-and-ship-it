@@ -1748,6 +1748,16 @@ export type Database = {
           smtp_port: number | null
           smtp_user: string | null
           team_id: string
+          warmup_acknowledged_at: string | null
+          warmup_completed_at: string | null
+          warmup_current_limit: number | null
+          warmup_day: number
+          warmup_flag_at: string | null
+          warmup_flag_reason: string | null
+          warmup_last_tick_at: string | null
+          warmup_started_at: string | null
+          warmup_status: string
+          warmup_target_limit: number | null
         }
         Insert: {
           api_key?: string | null
@@ -1769,6 +1779,16 @@ export type Database = {
           smtp_port?: number | null
           smtp_user?: string | null
           team_id: string
+          warmup_acknowledged_at?: string | null
+          warmup_completed_at?: string | null
+          warmup_current_limit?: number | null
+          warmup_day?: number
+          warmup_flag_at?: string | null
+          warmup_flag_reason?: string | null
+          warmup_last_tick_at?: string | null
+          warmup_started_at?: string | null
+          warmup_status?: string
+          warmup_target_limit?: number | null
         }
         Update: {
           api_key?: string | null
@@ -1790,6 +1810,16 @@ export type Database = {
           smtp_port?: number | null
           smtp_user?: string | null
           team_id?: string
+          warmup_acknowledged_at?: string | null
+          warmup_completed_at?: string | null
+          warmup_current_limit?: number | null
+          warmup_day?: number
+          warmup_flag_at?: string | null
+          warmup_flag_reason?: string | null
+          warmup_last_tick_at?: string | null
+          warmup_started_at?: string | null
+          warmup_status?: string
+          warmup_target_limit?: number | null
         }
         Relationships: [
           {
@@ -4659,6 +4689,7 @@ export type Database = {
         Args: { _new_owner_id: string; _team_id: string }
         Returns: undefined
       }
+      warmup_tick: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "manager" | "agent"
