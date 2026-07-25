@@ -815,23 +815,44 @@ function Pricing() {
                   )}
                   <h3 className="font-bold text-xl text-white">{p.name}</h3>
                   <p className="text-sm text-zinc-500 mt-1">{p.seats} seat{p.seats > 1 ? "s" : ""}</p>
-                  <div className="mt-6 flex items-baseline gap-1">
-                    <span className="text-5xl font-black text-white">${displayPrice}</span>
-                    <span className="text-zinc-500">/mo</span>
+                  <div className="mt-6 flex items-baseline gap-1 min-w-0">
+                    {p.custom ? (
+                      <>
+                        <span className="text-4xl font-black text-white">Custom</span>
+                        <span className="text-zinc-500 ml-1">pricing</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-5xl font-black text-white">${displayPrice}</span>
+                        <span className="text-zinc-500">/mo</span>
+                      </>
+                    )}
                   </div>
-                  {annual && <p className="text-xs text-zinc-500 mt-1">billed annually</p>}
+                  {annual && !p.custom && <p className="text-xs text-zinc-500 mt-1">billed annually</p>}
+                  {p.custom && <p className="text-xs text-zinc-500 mt-1">tailored to your volume</p>}
 
-                  {/* Pricing CTA → /pricing keeps the existing checkout flow (source of truth) */}
-                  <Link
-                    to="/pricing"
-                    className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition ${
-                      p.featured
-                        ? "r4d-bg-lime hover:opacity-90 text-black"
-                        : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
-                    }`}
-                  >
-                    Checkout {p.name} <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  {/* Direct-to-checkout: Whop for paid tiers, /enterprise for custom */}
+                  {p.external ? (
+                    <a
+                      href={p.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition min-w-0 whitespace-nowrap text-sm sm:text-base ${
+                        p.featured
+                          ? "r4d-bg-lime hover:opacity-90 text-black"
+                          : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                      }`}
+                    >
+                      <span className="truncate">{p.ctaLabel}</span> <ArrowRight className="w-4 h-4 shrink-0" />
+                    </a>
+                  ) : (
+                    <Link
+                      to="/enterprise"
+                      className="mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition min-w-0 whitespace-nowrap text-sm sm:text-base bg-white text-black hover:bg-white/90"
+                    >
+                      <span className="truncate">{p.ctaLabel}</span> <ArrowRight className="w-4 h-4 shrink-0" />
+                    </Link>
+                  )}
 
                   <ul className="mt-8 space-y-3 text-sm">
                     {p.features.map((f) => (
@@ -846,6 +867,7 @@ function Pricing() {
             );
           })}
         </div>
+
         <p className="mt-8 text-center text-xs text-zinc-500 flex items-center justify-center gap-2 flex-wrap">
           <Shield className="w-3.5 h-3.5" />
           Payments secured · Manual approval before access · Cancel anytime.
