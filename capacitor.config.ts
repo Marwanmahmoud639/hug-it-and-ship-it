@@ -18,6 +18,19 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample",
+      iconColor: "#3B82F6",
+    },
+    Camera: {
+      // iOS permission strings — copied into Info.plist by Capacitor
+      // NSCameraUsageDescription / NSPhotoLibraryUsageDescription handled in Xcode
+    },
+  },
 };
 
 export default config;
