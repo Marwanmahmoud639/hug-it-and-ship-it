@@ -24,6 +24,7 @@ export type MapContact = {
   twitter_url: string | null;
   youtube_url: string | null;
   created_at: string;
+  business_only?: boolean;
 };
 
 function relTime(iso: string) {
