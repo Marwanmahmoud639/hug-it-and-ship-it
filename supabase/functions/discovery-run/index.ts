@@ -1378,12 +1378,13 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (b) => {
-          const socials = await enrichSocials(b.contact_name, b.name, serperKey);
+          const socials = await enrichSocials(b.contact_name, b.name, serperKey, b.city);
           if (socials.facebook_url) b.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) b.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) b.twitter_url ||= socials.twitter_url;
           if (socials.youtube_url) b.youtube_url ||= socials.youtube_url;
         }));
+
       }
     }
     for (const b of merged) {
