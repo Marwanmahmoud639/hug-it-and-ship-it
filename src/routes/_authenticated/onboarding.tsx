@@ -374,14 +374,10 @@ function Step6Brief({ progress, onBack, onNext }: any) {
 // ---------------- Step 7: connect APIs + sending email ----------------
 function Step7Connect({ progress, onBack, onNext }: any) {
   const persist = useServerFn(saveSendingEmail);
-  const startGmail = useServerFn(
-    // Lazy import to avoid pulling server modules into this component's graph
-    // at build time; useServerFn only needs the reference.
-    (require as any) ? undefined as any : undefined as any,
-  );
   const [connected, setConnected] = useState<Record<string, boolean>>(progress?.connected_apis ?? {});
   const [busy, setBusy] = useState(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
+
 
   // Check status on mount
   useEffect(() => {
