@@ -78,9 +78,63 @@ export function EmailWarmupPanel() {
     refresh();
   };
 
-  const onClearFlag = async (id: string) => {
-    await flag({ data: { account_id: id, status: "idle" } }).catch((e: any) => toast.error(e?.message));
-    refresh();
+  const emailValid = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+
+  const queueEmail = (raw: string) => {
+    const parts = raw.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+    const existing = new Set(accounts.map((a) => a.from_email?.toLowerCase()));
+    const next = [...pending];
+    let bad = 0;
+    for (const p of parts) {
+      if (!emailValid(p)) { bad++; continue; }
+      const lower = p.toLowerCase();
+      if (existing.has(lower) || next.some((x) => x.toLowerCase() === lower)) continue;
+      next.push(p);
+    }
+    setPending(next);
+    setNewEmail("");
+    if (bad > 0) toast.error(`${bad} invalid email${bad === 1 ? "" : "s"} skipped`);
+  };
+
+  const removeQueued = (e: string) => setPending((prev) => prev.filter((x) => x !== e));
+
+  const onAddAndStart = async () => {
+    if (pending.length === 0 && selected.size === 0) {
+      return toast.error("Add at least one email or pick an existing inbox");
+    }
+    setAdding(true);
+    try {
+      // 1) create any pending inboxes as SMTP placeholders (user finishes creds in Email accounts)
+      const created: string[] = [];
+      for (const em of pending) {
+        try {
+          await addAccount({ data: { provider: "smtp", from_email: em, daily_limit: 200 } });
+          created.push(em);
+        } catch (e: any) {
+          toast.error(`Couldn't add ${em}: ${e?.message ?? "error"}`);
+        }
+      }
+      if (created.length) toast.success(`Added ${created.length} inbox${created.length === 1 ? "" : "es"}. Finish SMTP/OAuth setup in Email accounts.`);
+
+      // 2) reload and auto-select all newly added
+      const r = await list();
+      setAccounts(r.accounts);
+      const createdIds = new Set(
+        (r.accounts ?? [])
+          .filter((a: any) => created.map((e) => e.toLowerCase()).includes(a.from_email?.toLowerCase()))
+          .map((a: any) => a.id as string),
+      );
+      const startIds = Array.from(new Set([...selected, ...createdIds]));
+      if (startIds.length === 0) { setPending([]); return; }
+      const capped = startIds.slice(0, canStart);
+      const r2 = await start({ data: { account_ids: capped } });
+      toast.success(`Warm-up started for ${r2.started} inbox${r2.started === 1 ? "" : "es"}. Ramp-up takes 7 days.`);
+      setSelected(new Set());
+      setPending([]);
+      await refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to start warm-up");
+    } finally { setAdding(false); }
   };
 
   return (
@@ -89,34 +143,71 @@ export function EmailWarmupPanel() {
         <div>
           <h3 className="font-semibold text-sm flex items-center gap-2"><Flame className="w-4 h-4" /> Inbox warm-up</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Gradually ramps daily volume across a 7-day plan ({RAMP.join(" → ")}) so mailbox providers trust your domain.
-            After the ramp, we lift the cap to your target and mark the inbox <strong>Ready</strong> for full-speed sending.
-            You can warm up to <strong>20 inboxes</strong> at a time. Currently warming: <strong>{warming}/20</strong>.
+            Add the emails you'll send from, then click <strong>Start warm-up</strong>. We gradually ramp daily volume across a 7-day plan ({RAMP.join(" → ")}) so mailbox providers trust your domain.
+            After the ramp, we lift the cap to your target and mark the inbox <strong>Ready</strong>. You can warm up to <strong>20 inboxes</strong> at a time. Currently warming: <strong>{warming}/20</strong>.
           </p>
         </div>
-        <Button size="sm" onClick={onStart} disabled={busy || selected.size === 0}>
-          <Play className="w-4 h-4 mr-1" />Start warm-up ({selected.size})
-        </Button>
+      </div>
+
+      {/* Add-emails composer */}
+      <div className="rounded-lg border border-border p-3 space-y-3 bg-muted/20">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add sending inboxes</div>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            placeholder="you@yourdomain.com — paste multiple separated by comma or space"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") { e.preventDefault(); if (newEmail.trim()) queueEmail(newEmail); }
+            }}
+          />
+          <Button type="button" variant="outline" size="sm" onClick={() => newEmail.trim() && queueEmail(newEmail)}>
+            <Plus className="w-4 h-4 mr-1" />Add
+          </Button>
+        </div>
+        {pending.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pending.map((e) => (
+              <Badge key={e} variant="secondary" className="gap-1 pr-1">
+                {e}
+                <button type="button" onClick={() => removeQueued(e)} className="ml-1 rounded hover:bg-background/60 p-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <p className="text-[11px] text-muted-foreground">
+            New inboxes are added as SMTP placeholders — finish credentials in <strong>Email accounts</strong> so warming and sending can go out.
+          </p>
+          <Button size="sm" onClick={onAddAndStart} disabled={adding || busy || (pending.length === 0 && selected.size === 0)}>
+            <Play className="w-4 h-4 mr-1" />
+            {adding ? "Starting…" : `Start warm-up (${pending.length + selected.size})`}
+          </Button>
+        </div>
       </div>
 
       {eligible.length > 0 && (
-        <div className="rounded-lg border border-border divide-y">
-          {eligible.map((a) => (
-            <label key={a.id} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30">
-              <Checkbox checked={selected.has(a.id)} onCheckedChange={() => toggle(a.id)} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{a.from_email}</div>
-                <div className="text-xs text-muted-foreground">{a.provider} · target {a.daily_limit}/day</div>
-              </div>
-              {statusBadge(a.warmup_status)}
-            </label>
-          ))}
+        <div className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Existing inboxes ready to warm</div>
+          <div className="rounded-lg border border-border divide-y">
+            {eligible.map((a) => (
+              <label key={a.id} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30">
+                <Checkbox checked={selected.has(a.id)} onCheckedChange={() => toggle(a.id)} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{a.from_email}</div>
+                  <div className="text-xs text-muted-foreground">{a.provider} · target {a.daily_limit}/day</div>
+                </div>
+                {statusBadge(a.warmup_status)}
+              </label>
+            ))}
+          </div>
         </div>
       )}
 
-      {accounts.length === 0 && (
-        <p className="text-sm text-muted-foreground">Add a sending account first, then start warm-up.</p>
-      )}
+
 
       {(warming > 0 || accounts.some((a) => ["ready", "spammed", "burned"].includes(a.warmup_status))) && (
         <div className="space-y-2">
