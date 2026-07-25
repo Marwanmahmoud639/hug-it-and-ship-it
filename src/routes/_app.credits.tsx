@@ -1,11 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles, Infinity as InfinityIcon, Mail, TrendingUp } from "lucide-react";
+import { Sparkles, Infinity as InfinityIcon, LifeBuoy, TrendingUp, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-
-const SUPPORT_EMAIL = "support@reach4dollars.com";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { submitSupportRequest, listMySupportRequests } from "@/lib/support.functions";
 
 export const Route = createFileRoute("/_app/credits")({ component: CreditsPage });
 
@@ -36,11 +44,6 @@ function CreditsPage() {
   const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
   const planStatus = (team as any)?.plan_status ?? "trial";
   const trialEnds = (team as any)?.trial_ends_at ? new Date((team as any).trial_ends_at) : null;
-
-  const supportSubject = encodeURIComponent(`Credit top-up request · Team ${team?.name ?? ""}`);
-  const supportBody = encodeURIComponent(
-    `Hi,\n\nI'd like to add more credits to my account.\n\nTeam: ${team?.name ?? ""}\nTeam ID: ${team?.id ?? ""}\nCurrent plan: ${(team as any)?.plan ?? "—"}\nCredits used: ${used.toLocaleString()} / ${total.toLocaleString()}\n\nThanks!`,
-  );
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
@@ -78,21 +81,117 @@ function CreditsPage() {
         </div>
       </Card>
 
-      <Card className="p-6 space-y-3">
-        <div className="flex items-center gap-2 font-semibold">
-          <TrendingUp className="w-4 h-4" /> Need more credits?
+      <SupportRequestForm />
+      <MyRequestsList />
+    </div>
+  );
+}
+
+function SupportRequestForm() {
+  const submit = useServerFn(submitSupportRequest);
+  const qc = useQueryClient();
+  const [category, setCategory] = useState("credits");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+
+  const mut = useMutation({
+    mutationFn: async () => submit({ data: { category: category as any, subject, message } }),
+    onSuccess: () => {
+      toast.success("Request sent — we'll email you back shortly.");
+      setSubject("");
+      setMessage("");
+      qc.invalidateQueries({ queryKey: ["my-support-requests"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to send request"),
+  });
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center gap-2 font-semibold">
+        <LifeBuoy className="w-4 h-4" /> Contact support
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Send us a message directly from the app. We'll email you the response and you'll see it here too.
+      </p>
+      <div className="grid gap-3">
+        <div className="grid gap-1.5">
+          <Label>Category</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="credits">Credits / top-up</SelectItem>
+              <SelectItem value="billing">Billing</SelectItem>
+              <SelectItem value="technical">Technical issue</SelectItem>
+              <SelectItem value="feature">Feature request</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Contact support to top up your balance or upgrade your plan. Include your team name and how many extra credits you need.
-        </p>
-        <div className="flex gap-2 flex-wrap">
-          <Button asChild>
-            <a href={`mailto:${SUPPORT_EMAIL}?subject=${supportSubject}&body=${supportBody}`}>
-              <Mail className="w-4 h-4 mr-2" /> Contact support
-            </a>
+        <div className="grid gap-1.5">
+          <Label>Subject</Label>
+          <Input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Need 10,000 more credits"
+            maxLength={200}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Message</Label>
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Tell us how we can help…"
+            rows={5}
+            maxLength={4000}
+          />
+        </div>
+        <div>
+          <Button
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending || subject.trim().length < 3 || message.trim().length < 10}
+          >
+            {mut.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</> : <><TrendingUp className="w-4 h-4 mr-2" /> Send request</>}
           </Button>
         </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
+  );
+}
+
+function MyRequestsList() {
+  const list = useServerFn(listMySupportRequests);
+  const { data } = useQuery({
+    queryKey: ["my-support-requests"],
+    queryFn: () => list({ data: {} as any }),
+  });
+  const rows = (data as any)?.rows ?? [];
+  if (!rows.length) return null;
+  return (
+    <Card className="p-6 space-y-3">
+      <div className="font-semibold">Your recent requests</div>
+      <div className="space-y-3">
+        {rows.map((r: any) => (
+          <div key={r.id} className="border rounded-lg p-3 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-medium truncate">{r.subject}</div>
+              <Badge variant={r.status === "resolved" ? "default" : "secondary"} className="capitalize">
+                {r.status === "resolved" ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                {r.status}
+              </Badge>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 capitalize">
+              {r.category} · {new Date(r.created_at).toLocaleString()}
+            </div>
+            {r.admin_response && (
+              <div className="mt-2 p-2 bg-muted/50 rounded whitespace-pre-wrap text-sm">
+                <div className="text-xs text-muted-foreground mb-1">Support response:</div>
+                {r.admin_response}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
