@@ -90,33 +90,26 @@ async function freeSkiptraceIndividual(
 
   for (const q of queries) {
     try {
-      const ctl = new AbortController();
-      const to = setTimeout(() => ctl.abort(), 6000);
-      const res = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, num: 10 }),
-        signal: ctl.signal,
-      });
-      clearTimeout(to);
-      if (!res.ok) continue;
-      const data = await res.json();
-      for (const r of (data.organic || []) as any[]) {
+      const organic = await unifiedSearch(q, serperKey || null, 10);
+      const providerLabel = serperKey ? "serper_web" : "ddg_web";
+      for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
-        for (const ph of extractPhones(blob)) addPhone(ph, "serper_web");
-        for (const m of blob.matchAll(EMAIL_RX)) addEmail(m[0], "serper_web");
+        // Strict identity gate: only accept phones/emails from pages whose
+        // title/snippet mentions this person + (company OR city).
+        if (!strictIdentityMatch(`${blob} ${r.link || ""}`, args.name, args.company, args.city)) continue;
+        for (const ph of extractPhones(blob)) addPhone(ph, providerLabel);
+        for (const m of blob.matchAll(EMAIL_RX)) addEmail(m[0], providerLabel);
       }
-      const kgBlob = JSON.stringify(data.knowledgeGraph || data.answerBox || {});
-      for (const ph of extractPhones(kgBlob)) addPhone(ph, "serper_kg");
-      for (const m of kgBlob.matchAll(EMAIL_RX)) addEmail(m[0], "serper_kg");
 
       if (firecrawlKey) {
         const urls: string[] = [];
-        for (const r of (data.organic || []) as any[]) {
+        for (const r of organic) {
           if (!r.link) continue;
           try {
             const host = new URL(r.link).hostname.toLowerCase();
             if (JUNK_DOMAIN_RX.test(host) || PEOPLE_SEARCH_RX.test(host)) continue;
+            // Only crawl pages whose SERP snippet already passes strict match.
+            if (!strictIdentityMatch(`${r.title || ""} ${r.snippet || ""} ${r.link}`, args.name, args.company, args.city)) continue;
             urls.push(r.link);
           } catch { /* skip */ }
         }
@@ -131,6 +124,8 @@ async function freeSkiptraceIndividual(
             const sd = await sr.json();
             const md: string = sd?.data?.markdown || "";
             if (!md || md.length < 50) continue;
+            // Verify person's name still appears in the crawled body.
+            if (!strictIdentityMatch(md, args.name, args.company, args.city)) continue;
             for (const ph of extractPhones(md)) addPhone(ph, "firecrawl_web");
             for (const m of md.matchAll(EMAIL_RX)) addEmail(m[0], "firecrawl_web");
           } catch { /* skip page */ }
@@ -140,6 +135,7 @@ async function freeSkiptraceIndividual(
     } catch { /* next query */ }
   }
   return { phones, emails };
+
 }
 
 // ─── Social profile lookup (Serper + DDG fallback, strict identity) ─────────
