@@ -57,12 +57,13 @@ function extractPhones(text: string): string[] {
   return Array.from(out);
 }
 
-// ─── FREE skip-trace for an individual (Serper + Firecrawl, global) ──────────
+// ─── FREE skip-trace for an individual (Serper if present, DDG fallback) ────
 async function freeSkiptraceIndividual(
   args: { name: string; company?: string; city?: string; state?: string; country?: string },
   serperKey: string,
   firecrawlKey: string | null,
 ): Promise<{ phones: Map<string, Set<string>>; emails: Map<string, Set<string>> }> {
+
   const EMAIL_RX = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
   const JUNK_EMAIL_RX = /example\.com|sentry|wixpress|cloudflare|domain\.com|googleapis|schema\.org|w3\.org|placeholder|noreply|no-reply|mailer-daemon/i;
   const JUNK_DOMAIN_RX = /facebook\.com|linkedin\.com|instagram\.com|twitter\.com|x\.com|youtube\.com|google\.com|bing\.com|yahoo\.com|reddit\.com|wikipedia\.org|github\.com|pinterest\.com|tiktok\.com|apple\.com|microsoft\.com|amazon\.com/i;
