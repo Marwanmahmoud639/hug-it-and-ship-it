@@ -78,6 +78,11 @@ export function EmailWarmupPanel() {
     refresh();
   };
 
+  const onClearFlag = async (id: string) => {
+    await flag({ data: { account_id: id, status: "idle" } }).catch((e: any) => toast.error(e?.message));
+    refresh();
+  };
+
   const emailValid = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 
   const queueEmail = (raw: string) => {
