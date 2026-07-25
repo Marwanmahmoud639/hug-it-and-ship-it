@@ -388,6 +388,12 @@ function Settings() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="warmup" className="mt-4">
+          <EmailWarmupPanel />
+        </TabsContent>
+
+
+
         {isSuperAdmin && (
           <TabsContent value="compliance" className="mt-4 space-y-4">
             <CompliancePanel settings={settings} save={save} />
