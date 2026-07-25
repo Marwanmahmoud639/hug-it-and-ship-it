@@ -103,7 +103,7 @@ export const submitSupportRequest = createServerFn({ method: "POST" })
   <table style="width:100%;border-collapse:collapse;font-size:14px">
     <tr><td style="padding:6px 0;color:#666">Category</td><td style="padding:6px 0"><b>${escape(data.category)}</b></td></tr>
     <tr><td style="padding:6px 0;color:#666">Subject</td><td style="padding:6px 0"><b>${escape(data.subject)}</b></td></tr>
-    <tr><td style="padding:6px 0;color:#666">User</td><td style="padding:6px 0">${escape(email)} (${escape(profile?.full_name ?? "")})</td></tr>
+    <tr><td style="padding:6px 0;color:#666">User</td><td style="padding:6px 0">${escape(email)}</td></tr>
     <tr><td style="padding:6px 0;color:#666">Team</td><td style="padding:6px 0">${escape(teamName)} · ${escape(plan)}</td></tr>
     <tr><td style="padding:6px 0;color:#666">Credits</td><td style="padding:6px 0">${creditsUsed.toLocaleString()} / ${creditsTotal.toLocaleString()}</td></tr>
     <tr><td style="padding:6px 0;color:#666">Request ID</td><td style="padding:6px 0"><code>${inserted.id}</code></td></tr>
