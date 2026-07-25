@@ -83,6 +83,17 @@ export const startIndividualDiscovery = createServerFn({ method: "POST" })
       .single();
     if (!profile?.team_id) throw new Error("No team");
 
+    const { data: quota } = await supabase.rpc("consume_trial_quota" as never, {
+      _team_id: profile.team_id, _kind: "discovery", _amount: 1,
+    } as never);
+    const q = quota as { ok: boolean; reason?: string; cap?: number } | null;
+    if (q && !q.ok) {
+      if (q.reason === "trial_expired") throw new Error("Your 3-day free trial has expired. Upgrade to keep running People Lookup.");
+      throw new Error(`Trial cap reached: you've used all ${q.cap ?? 100} Discovery credits. Upgrade to continue.`);
+    }
+
+
+
     const { data: search, error } = await supabase
       .from("individual_searches")
       .insert({
