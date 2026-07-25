@@ -695,14 +695,28 @@ function Founder() {
 
 function Pricing() {
   const [annual, setAnnual] = useState(false);
-  const plans = [
+  const plans: Array<{
+    slug: string;
+    name: string;
+    price: number;
+    seats: number;
+    featured?: boolean;
+    features: string[];
+    checkoutUrl: string;
+    external: boolean;
+    custom?: boolean;
+    ctaLabel: string;
+  }> = [
     {
       slug: "starter",
       name: "Starter Engine",
       price: 149,
       seats: 1,
+      checkoutUrl: "https://whop.com/checkout/plan_J2XG0wDx2IHMQ",
+      external: true,
+      ctaLabel: "Get Starter",
       features: [
-        "1,500 decision-maker contacts/mo",
+        "5,000 credits/mo (1 credit = 1 contact, skip trace, or email)",
         "5-channel sequence",
         "Verified mobile + personal email",
         "Pipeline + CRM",
@@ -714,8 +728,11 @@ function Pricing() {
       price: 499,
       seats: 3,
       featured: true,
+      checkoutUrl: "https://whop.com/checkout/plan_uwHpvDtO2m4Ew",
+      external: true,
+      ctaLabel: "Get Professional",
       features: [
-        "6,000 contacts/mo",
+        "15,000 credits/mo",
         "Everything in Starter",
         "Team inbox",
         "Advanced sequences + A/B",
@@ -726,18 +743,23 @@ function Pricing() {
     {
       slug: "enterprise",
       name: "Enterprise Engine",
-      price: 999,
+      price: 0,
       seats: 10,
+      custom: true,
+      checkoutUrl: "/enterprise",
+      external: false,
+      ctaLabel: "Book a call",
       features: [
-        "20,000+ contacts/mo",
+        "50,000+ credits/mo (custom)",
         "Everything in Pro",
-        "Sub-accounts",
+        "Sub-accounts + white-label",
         "White-glove onboarding",
         "Dedicated success manager",
         "Custom data + API",
       ],
     },
   ];
+
 
   return (
     <section id="pricing" className="py-24 md:py-28 px-6 bg-black">
