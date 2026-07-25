@@ -118,6 +118,7 @@ function Settings() {
           <TabTrig value="automation-apis" Icon={Webhook}>Automation APIs</TabTrig>
           <TabTrig value="notifications" Icon={Bell}>Notifications</TabTrig>
           <TabTrig value="pipeline" Icon={Kanban}>Pipeline</TabTrig>
+          <TabTrig value="warmup" Icon={Flame}>Email Warmup</TabTrig>
           {isSuperAdmin && <TabTrig value="compliance" Icon={Shield}>Compliance</TabTrig>}
           {isSuperAdmin && <TabTrig value="email-infra" Icon={Server}>Email Infra</TabTrig>}
           <TabTrig value="account" Icon={User}>Account</TabTrig>
