@@ -164,27 +164,33 @@ export const retryDMSearch = createServerFn({ method: "POST" })
     if (!contact) throw new Error("Contact not found");
     if (!contact.business_only) return { ok: true, message: "Already has decision maker.", found: false };
 
-    // Run the People Lookup cascade against the business name + city/state.
-    const { runPeopleLookup } = await import("./lookup.functions");
+    // Free DM search: Google-style query via DuckDuckGo HTML endpoint
     let dmName: string | null = null;
     let dmSource: string | null = null;
     try {
-      const res: any = await (runPeopleLookup as any).__handler
-        ? await (runPeopleLookup as any).__handler({
-            data: { name: "", phone: "", address: "", city: contact.city || "", state: contact.state || "", country: "US" },
-            context,
-          })
-        : { hits: [] };
-      // Parse hits for a plausible owner name matching this company
-      for (const h of (res.hits || []) as any[]) {
-        const text = `${h.source_title || ""} ${h.snippet || ""}`.toLowerCase();
-        if (contact.company && text.includes(String(contact.company).toLowerCase().slice(0, 20))) {
-          // Extract capitalized 2-word names from the title
-          const m = (h.source_title || "").match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
-          if (m) { dmName = m[1]; dmSource = h.source_name || "web"; break; }
+      const q = encodeURIComponent(`"${contact.company}" ${contact.city || ""} ${contact.state || ""} (owner OR founder OR CEO OR president) site:linkedin.com/in`);
+      const res = await fetch(`https://duckduckgo.com/html/?q=${q}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          "Accept-Language": "en-US,en",
+        },
+      });
+      if (res.ok) {
+        const html = await res.text();
+        // pull first LinkedIn /in/ title, format "First Last - Title - Company | LinkedIn"
+        const m = html.match(/linkedin\.com\/in\/[^"']+["'][^>]*>([^<]+)</i);
+        if (m) {
+          const raw = m[1].replace(/\s*\|\s*LinkedIn.*$/i, "").trim();
+          const parts = raw.split(/\s*[-–|]\s*/);
+          const nameCandidate = parts[0]?.trim();
+          if (nameCandidate && /^[A-Z][a-z]+(?:\s+[A-Z][a-z\-']+)+$/.test(nameCandidate)) {
+            dmName = nameCandidate;
+            dmSource = "linkedin_search";
+          }
         }
       }
     } catch { /* fall through */ }
+
 
     const nextAttempts = (contact.dm_search_attempts || 0) + 1;
 
