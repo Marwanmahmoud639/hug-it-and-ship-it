@@ -1730,15 +1730,18 @@ async function runPipeline(searchId: string) {
       }));
       if (emailRows.length) await SUPABASE.from("contact_emails").insert(emailRows);
 
-      // auto-pipeline - User requested all leads be added
+      // auto-pipeline — business-only → "Needs DM Research", full DM → "New Lead"
       let autoPipelined = false;
-      if (newLeadStage?.id) {
+      const targetStageId = isBusinessOnly ? (needsDmStage?.id || newLeadStage?.id) : newLeadStage?.id;
+      if (targetStageId) {
         const { data: existingLead } = await SUPABASE.from("pipeline_leads")
           .select("id").eq("team_id", teamId).eq("contact_id", contactId).maybeSingle();
         if (!existingLead) {
           await SUPABASE.from("pipeline_leads").insert({
-            team_id: teamId, contact_id: contactId, stage_id: newLeadStage.id,
-            notes: `Auto-added from Discovery: ${keyword}`,
+            team_id: teamId, contact_id: contactId, stage_id: targetStageId,
+            notes: isBusinessOnly
+              ? `Auto-added from Discovery (B2B, no DM found): ${keyword}`
+              : `Auto-added from Discovery: ${keyword}`,
           });
           autoAdded++;
           autoPipelined = true;
