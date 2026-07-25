@@ -35,10 +35,14 @@ export function EmailWarmupPanel() {
   const stop = useServerFn(stopWarmup);
   const flag = useServerFn(flagWarmup);
   const ack = useServerFn(acknowledgeWarmupFlag);
+  const addAccount = useServerFn(addEmailAccount);
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [pending, setPending] = useState<string[]>([]);
+  const [adding, setAdding] = useState(false);
 
   const refresh = async () => {
     try { const r = await list(); setAccounts(r.accounts); } catch {}
