@@ -103,14 +103,44 @@ function LeadDrawerBody({ contactId }: { contactId: string }) {
     load();
   };
 
+  const retryDM = useServerFn(retryDMSearch);
+  const [retrying, setRetrying] = useState(false);
+  const onRetryDM = async () => {
+    setRetrying(true);
+    try {
+      const r: any = await retryDM({ data: { contactId } });
+      if (r?.found) toast.success(r.message || "Decision maker found");
+      else toast.info(r?.message || "No decision maker found yet");
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Retry failed");
+    } finally { setRetrying(false); }
+  };
+
   return (
     <div className="flex flex-col">
       <SheetHeader className="px-5 pt-5 pb-3 border-b border-border">
         <div className="flex items-center justify-between gap-3">
           <SheetTitle className="text-lg font-semibold truncate">{contact.name || "Untitled contact"}</SheetTitle>
+          {contact.business_only && (
+            <Badge className="bg-orange-500/15 text-orange-600 border-orange-500/40 gap-1">
+              <Building2 className="w-3 h-3" /> B2B
+            </Badge>
+          )}
         </div>
         {(contact.title || contact.company) && (
           <p className="text-xs text-muted-foreground">{[contact.title, contact.company].filter(Boolean).join(" · ")}</p>
+        )}
+        {contact.business_only && (
+          <div className="mt-2 rounded-md border border-orange-500/30 bg-orange-500/5 p-2 text-xs flex items-center justify-between gap-2">
+            <span className="text-orange-700 dark:text-orange-400">
+              No decision maker found yet · attempts: {contact.dm_search_attempts || 1}
+            </span>
+            <Button size="sm" variant="outline" className="h-7 gap-1" disabled={retrying} onClick={onRetryDM}>
+              <RefreshCw className={`w-3 h-3 ${retrying ? "animate-spin" : ""}`} />
+              {retrying ? "Searching…" : "Retry DM search"}
+            </Button>
+          </div>
         )}
         <Link
           to="/contacts/$id"
