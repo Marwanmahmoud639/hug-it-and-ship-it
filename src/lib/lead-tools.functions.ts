@@ -143,3 +143,84 @@ export const validatePhone = createServerFn({ method: "POST" })
 
     return { result };
   });
+
+/**
+ * Retry the decision-maker search for a business-only lead.
+ * Re-invokes the discovery edge function's DM cascade for this single business,
+ * updates the contact if a DM is found, moves it into the "New Lead" stage,
+ * and charges the remaining 0.5 credit.
+ */
+export const retryDMSearch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ contactId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const team_id = await getTeamId(supabase, userId);
+
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("id, name, company, city, state, business_only, dm_search_attempts")
+      .eq("id", data.contactId).eq("team_id", team_id).maybeSingle();
+    if (!contact) throw new Error("Contact not found");
+    if (!contact.business_only) return { ok: true, message: "Already has decision maker.", found: false };
+
+    // Free DM search: Google-style query via DuckDuckGo HTML endpoint
+    let dmName: string | null = null;
+    let dmSource: string | null = null;
+    try {
+      const q = encodeURIComponent(`"${contact.company}" ${contact.city || ""} ${contact.state || ""} (owner OR founder OR CEO OR president) site:linkedin.com/in`);
+      const res = await fetch(`https://duckduckgo.com/html/?q=${q}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          "Accept-Language": "en-US,en",
+        },
+      });
+      if (res.ok) {
+        const html = await res.text();
+        // pull first LinkedIn /in/ title, format "First Last - Title - Company | LinkedIn"
+        const m = html.match(/linkedin\.com\/in\/[^"']+["'][^>]*>([^<]+)</i);
+        if (m) {
+          const raw = m[1].replace(/\s*\|\s*LinkedIn.*$/i, "").trim();
+          const parts = raw.split(/\s*[-–|]\s*/);
+          const nameCandidate = parts[0]?.trim();
+          if (nameCandidate && /^[A-Z][a-z]+(?:\s+[A-Z][a-z\-']+)+$/.test(nameCandidate)) {
+            dmName = nameCandidate;
+            dmSource = "linkedin_search";
+          }
+        }
+      }
+    } catch { /* fall through */ }
+
+
+    const nextAttempts = (contact.dm_search_attempts || 0) + 1;
+
+    if (!dmName) {
+      await supabase.from("contacts").update({
+        dm_search_attempts: nextAttempts,
+        dm_last_retry_at: new Date().toISOString(),
+      }).eq("id", contact.id).eq("team_id", team_id);
+      return { ok: true, found: false, message: `No decision maker found on attempt #${nextAttempts}. Try again later or add manually.` };
+    }
+
+    // Found a DM — upgrade the contact and move pipeline stage
+    await supabase.from("contacts").update({
+      name: dmName,
+      business_only: false,
+      dm_search_attempts: nextAttempts,
+      dm_last_retry_at: new Date().toISOString(),
+      verification_sources: [dmSource || "retry"],
+    }).eq("id", contact.id).eq("team_id", team_id);
+
+    const { data: newLeadStage } = await supabase
+      .from("pipeline_stages").select("id").eq("team_id", team_id).eq("position", 0).maybeSingle();
+    if (newLeadStage?.id) {
+      await supabase.from("pipeline_leads")
+        .update({ stage_id: newLeadStage.id })
+        .eq("team_id", team_id).eq("contact_id", contact.id);
+    }
+    // Charge the remaining 0.5 credit for upgrading business-only → DM
+    await supabase.rpc("consume_credits", { _team_id: team_id, _amount: 0.5, _kind: "discovery_dm_upgrade" });
+
+    return { ok: true, found: true, name: dmName, message: `Decision maker found: ${dmName}` };
+  });
+

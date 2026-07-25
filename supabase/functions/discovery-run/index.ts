@@ -1106,21 +1106,9 @@ async function runPipeline(searchId: string) {
     const keyword = search.keyword as string;
     const location = (search.location as string) || "";
 
-    // ── USA + Canada gate: bail out cleanly for unsupported regions ─────────
-    const country = resolveCountry(location);
-    if (!country) {
-      await SUPABASE.from("searches").update({
-        status: "failed",
-        error_text: "Discovery currently supports USA and Canada only. Please enter a US state/city or Canadian province/city.",
-        completed_at: new Date().toISOString(),
-      }).eq("id", searchId);
-      await logActivity(searchId, teamId, "business", "error", "🌎",
-        "Discovery is limited to USA and Canada. Update the location and try again.",
-        { percent: 100 });
-      return;
-    }
-    // overwrite countryHint downstream so scrapers stay in-region
-    const countryHint = country;
+    // ── US-only gate ────────────────────────────────────────────────────────
+    const country = resolveCountry(location) === "USA" ? "USA" : "USA"; // force US
+    const countryHint = "USA";
 
     async function checkCancelled(): Promise<boolean> {
       const { data } = await SUPABASE.from("searches").select("status").eq("id", searchId).single();
@@ -1583,6 +1571,8 @@ async function runPipeline(searchId: string) {
     const threshold = (settings?.auto_pipeline_threshold as number) ?? 70;
     const { data: newLeadStage } = await SUPABASE
       .from("pipeline_stages").select("id").eq("team_id", teamId).eq("position", 0).maybeSingle();
+    const { data: needsDmStage } = await SUPABASE
+      .from("pipeline_stages").select("id").eq("team_id", teamId).eq("name", "Needs DM Research").maybeSingle();
 
     let autoAdded = 0;
     let totalScore = 0;
@@ -1640,6 +1630,12 @@ async function runPipeline(searchId: string) {
       totalScore += score;
       scoredCount++;
 
+      const isBusinessOnly = !b.contact_name;
+      const verifiedSources: string[] = [];
+      if ((b.emails_found || []).length >= 2) verifiedSources.push("email_cross_verified");
+      if ((b.phones_found || []).length >= 2) verifiedSources.push("phone_cross_verified");
+      if ((b.sources || []).length >= 2) verifiedSources.push(...(b.sources || []).slice(0, 4));
+
       const contactRow: Record<string, unknown> = {
         team_id: teamId,
         name: b.contact_name || b.name,
@@ -1656,15 +1652,19 @@ async function runPipeline(searchId: string) {
         address: b.address || null,
         city: b.city || null,
         state: b.state || null,
-        country: b.country || null,
+        country: b.country || "US",
         email_verified: verifiedEmail,
         phone_verified: verifiedPhoneAny,
         verification_sources: b.sources,
-        lead_score: score,
+        lead_score: isBusinessOnly ? Math.min(score, 40) : score,
         source: "discovery",
         discovery_keyword: keyword,
         notes: b.description || null,
         auto_added_by_discovery: true,
+        business_only: isBusinessOnly,
+        dm_search_attempts: 1,
+        dm_last_retry_at: new Date().toISOString(),
+        business_verified_sources: Array.from(new Set(verifiedSources)),
         last_activity_at: new Date().toISOString(),
         // 90-day retention for discovery leads — cron purges untouched rows
         auto_purge_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1718,15 +1718,18 @@ async function runPipeline(searchId: string) {
       }));
       if (emailRows.length) await SUPABASE.from("contact_emails").insert(emailRows);
 
-      // auto-pipeline - User requested all leads be added
+      // auto-pipeline — business-only → "Needs DM Research", full DM → "New Lead"
       let autoPipelined = false;
-      if (newLeadStage?.id) {
+      const targetStageId = isBusinessOnly ? (needsDmStage?.id || newLeadStage?.id) : newLeadStage?.id;
+      if (targetStageId) {
         const { data: existingLead } = await SUPABASE.from("pipeline_leads")
           .select("id").eq("team_id", teamId).eq("contact_id", contactId).maybeSingle();
         if (!existingLead) {
           await SUPABASE.from("pipeline_leads").insert({
-            team_id: teamId, contact_id: contactId, stage_id: newLeadStage.id,
-            notes: `Auto-added from Discovery: ${keyword}`,
+            team_id: teamId, contact_id: contactId, stage_id: targetStageId,
+            notes: isBusinessOnly
+              ? `Auto-added from Discovery (B2B, no DM found): ${keyword}`
+              : `Auto-added from Discovery: ${keyword}`,
           });
           autoAdded++;
           autoPipelined = true;
