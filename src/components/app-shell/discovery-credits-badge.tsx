@@ -38,11 +38,11 @@ export function DiscoveryCreditsBadge() {
         "hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-lg border text-xs font-medium leading-none whitespace-nowrap transition-colors hover:brightness-110",
         tone,
       )}
-      title={`Credits used this cycle: ${used.toLocaleString()} of ${total.toLocaleString()} · click for details`}
+      title={`Credits used this cycle: ${fmt(used)} of ${fmt(total)} · click for details`}
     >
       <Sparkles className="w-3.5 h-3.5 shrink-0" />
-      <span className="font-semibold">{remaining.toLocaleString()}</span>
-      <span className="opacity-70">/ {total.toLocaleString()} credits</span>
+      <span className="font-semibold">{fmt(remaining)}</span>
+      <span className="opacity-70">/ {fmt(total)} credits</span>
     </Link>
   );
 }
