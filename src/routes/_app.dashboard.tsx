@@ -8,6 +8,7 @@ import {
   Sparkles, Linkedin, Instagram, Facebook, Phone,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { WarmupAlert } from "@/components/settings/email-warmup-panel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
