@@ -63,8 +63,15 @@ export function LeadPinCard({
     >
       <div className="p-4 space-y-3">
         <div>
-          <div className="font-semibold text-base leading-tight">
-            {isBusiness ? `🏢 ${contact.company}` : `👤 ${contact.name}`}
+          <div className="flex items-start justify-between gap-2">
+            <div className="font-semibold text-base leading-tight">
+              {isBusiness ? `🏢 ${contact.company}` : `👤 ${contact.name}`}
+            </div>
+            {contact.business_only && (
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 border border-orange-500/40">
+                B2B
+              </span>
+            )}
           </div>
           {(contact.city || contact.state) && (
             <div className="text-muted-foreground text-xs flex items-center gap-1 mt-0.5">
