@@ -164,6 +164,7 @@ export const Route = createFileRoute("/api/public/webhooks/whop")({
               const contactLimit = planTier === "agency" ? 1_000_000 : planTier === "growth" ? 25_000 : 5_000;
               const seatLimit = planTier === "agency" ? 10 : planTier === "growth" ? 3 : 1;
               const discoveryLimit = planTier === "agency" ? 100_000 : planTier === "growth" ? 25_000 : 5_000;
+              const creditsTotal = planTier === "agency" ? 50_000 : planTier === "growth" ? 15_000 : 5_000;
               await supabaseAdmin.from("teams").update({
                 plan: planTier,
                 plan_status: "active",
@@ -172,6 +173,7 @@ export const Route = createFileRoute("/api/public/webhooks/whop")({
                 discovery_monthly_limit: discoveryLimit,
                 trial_ends_at: null,
               }).eq("id", teamId);
+              await supabaseAdmin.rpc("reset_credits" as never, { _team_id: teamId, _total: creditsTotal } as never);
             } else if (deactivate) {
               await supabaseAdmin.from("teams").update({ plan_status: "canceled" }).eq("id", teamId);
             }

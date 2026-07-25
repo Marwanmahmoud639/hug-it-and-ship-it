@@ -4046,6 +4046,9 @@ export type Database = {
         Row: {
           contact_limit: number
           created_at: string
+          credits_period_start: string
+          credits_total: number
+          credits_used: number
           custom_domain: string | null
           default_industry: string | null
           discovery_monthly_limit: number
@@ -4075,6 +4078,9 @@ export type Database = {
         Insert: {
           contact_limit?: number
           created_at?: string
+          credits_period_start?: string
+          credits_total?: number
+          credits_used?: number
           custom_domain?: string | null
           default_industry?: string | null
           discovery_monthly_limit?: number
@@ -4104,6 +4110,9 @@ export type Database = {
         Update: {
           contact_limit?: number
           created_at?: string
+          credits_period_start?: string
+          credits_total?: number
+          credits_used?: number
           custom_domain?: string | null
           default_industry?: string | null
           discovery_monthly_limit?: number
@@ -4560,6 +4569,10 @@ export type Database = {
         }
       }
       clear_team_switch: { Args: never; Returns: undefined }
+      consume_credits: {
+        Args: { _amount: number; _kind?: string; _team_id: string }
+        Returns: Json
+      }
       consume_trial_quota: {
         Args: { _amount?: number; _kind: string; _team_id: string }
         Returns: Json
@@ -4573,6 +4586,9 @@ export type Database = {
         Returns: {
           contact_limit: number
           created_at: string
+          credits_period_start: string
+          credits_total: number
+          credits_used: number
           custom_domain: string | null
           default_industry: string | null
           discovery_monthly_limit: number
@@ -4647,11 +4663,18 @@ export type Database = {
         Returns: Json
       }
       reserve_email_account: { Args: { p_team_id: string }; Returns: string }
+      reset_credits: {
+        Args: { _team_id: string; _total: number }
+        Returns: undefined
+      }
       switch_team: {
         Args: { _team_id: string }
         Returns: {
           contact_limit: number
           created_at: string
+          credits_period_start: string
+          credits_total: number
+          credits_used: number
           custom_domain: string | null
           default_industry: string | null
           discovery_monthly_limit: number
