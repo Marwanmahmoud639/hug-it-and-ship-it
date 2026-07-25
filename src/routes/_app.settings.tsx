@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Mail, MessageSquare, Globe, Share2, Sparkles, Bell, Kanban, User, Rocket, Shield, Server, Phone } from "lucide-react";
+import { CheckCircle2, Circle, Mail, MessageSquare, Globe, Share2, Sparkles, Bell, Kanban, User, Rocket, Shield, Server, Phone, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IS_AGENCY } from "@/lib/brand";
 import { CompliancePanel, EmailInfraPanel } from "@/components/settings/compliance-panels";
+import { EmailWarmupPanel } from "@/components/settings/email-warmup-panel";
 import { BlockedKeywordsPanel } from "@/components/settings/blocked-keywords-panel";
 import { NotificationsTab } from "@/components/settings/notifications-tab";
 import { SubdomainRequestPanel } from "@/components/settings/subdomain-request-panel";
@@ -117,6 +118,7 @@ function Settings() {
           <TabTrig value="automation-apis" Icon={Webhook}>Automation APIs</TabTrig>
           <TabTrig value="notifications" Icon={Bell}>Notifications</TabTrig>
           <TabTrig value="pipeline" Icon={Kanban}>Pipeline</TabTrig>
+          <TabTrig value="warmup" Icon={Flame}>Email Warmup</TabTrig>
           {isSuperAdmin && <TabTrig value="compliance" Icon={Shield}>Compliance</TabTrig>}
           {isSuperAdmin && <TabTrig value="email-infra" Icon={Server}>Email Infra</TabTrig>}
           <TabTrig value="account" Icon={User}>Account</TabTrig>
@@ -385,6 +387,12 @@ function Settings() {
             </div>
           </Card>
         </TabsContent>
+
+        <TabsContent value="warmup" className="mt-4">
+          <EmailWarmupPanel />
+        </TabsContent>
+
+
 
         {isSuperAdmin && (
           <TabsContent value="compliance" className="mt-4 space-y-4">
