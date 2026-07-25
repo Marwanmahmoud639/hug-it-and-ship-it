@@ -25,6 +25,7 @@ import { Route as ProposalTokenRouteImport } from './routes/proposal.$token'
 import { Route as PortalTokenRouteImport } from './routes/portal.$token'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AppWorkflowsRouteImport } from './routes/_app.workflows'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
@@ -142,6 +143,11 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   id: '/legal/privacy',
   path: '/legal/privacy',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AppTeamRoute
   '/workflows': typeof AppWorkflowsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/portal/$token': typeof PortalTokenRoute
@@ -432,6 +439,7 @@ export interface FileRoutesByTo {
   '/team': typeof AppTeamRoute
   '/workflows': typeof AppWorkflowsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/portal/$token': typeof PortalTokenRoute
@@ -490,6 +498,7 @@ export interface FileRoutesById {
   '/_app/team': typeof AppTeamRoute
   '/_app/workflows': typeof AppWorkflowsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/portal/$token': typeof PortalTokenRoute
@@ -547,6 +556,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/workflows'
     | '/admin'
+    | '/onboarding'
     | '/legal/privacy'
     | '/legal/terms'
     | '/portal/$token'
@@ -602,6 +612,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/workflows'
     | '/admin'
+    | '/onboarding'
     | '/legal/privacy'
     | '/legal/terms'
     | '/portal/$token'
@@ -659,6 +670,7 @@ export interface FileRouteTypes {
     | '/_app/team'
     | '/_app/workflows'
     | '/_authenticated/admin'
+    | '/_authenticated/onboarding'
     | '/legal/privacy'
     | '/legal/terms'
     | '/portal/$token'
@@ -835,6 +847,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/legal/privacy'
       preLoaderRoute: typeof LegalPrivacyRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -1114,10 +1133,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
