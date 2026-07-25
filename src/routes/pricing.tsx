@@ -104,13 +104,13 @@ function PricingPage() {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition ${
+                      className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition min-w-0 whitespace-nowrap text-sm sm:text-base ${
                         featured
                           ? "r4d-bg-lime hover:opacity-90 text-black"
                           : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
                       }`}
                     >
-                      Checkout {p.name} <ArrowRight className="w-4 h-4" />
+                      <span className="truncate">Get {p.name.replace(/\s*Engine$/i, "")}</span> <ArrowRight className="w-4 h-4 shrink-0" />
                     </a>
                   )}
                   <ul className="mt-8 space-y-3">
