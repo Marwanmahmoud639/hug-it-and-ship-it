@@ -4708,6 +4708,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      team_owner_is_super_admin: {
+        Args: { _team_id: string }
+        Returns: boolean
+      }
       transfer_foundation_owner: {
         Args: { _new_owner_id: string; _team_id: string }
         Returns: undefined
