@@ -373,13 +373,14 @@ function Step6Brief({ progress, onBack, onNext }: any) {
 
 // ---------------- Step 7: connect APIs + sending email ----------------
 function Step7Connect({ progress, onBack, onNext }: any) {
+  const { team } = useAuth();
   const persist = useServerFn(saveSendingEmail);
   const [connected, setConnected] = useState<Record<string, boolean>>(progress?.connected_apis ?? {});
   const [busy, setBusy] = useState(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-
-  // Check status on mount
   useEffect(() => {
     (async () => {
       try {
@@ -391,7 +392,19 @@ function Step7Connect({ progress, onBack, onNext }: any) {
         }
       } catch { /* ignore */ }
     })();
-  }, []);
+    if (team?.id) {
+      supabase.from("team_settings")
+        .select("linkedin_session,facebook_api_key,google_maps_key")
+        .eq("team_id", team.id).maybeSingle().then(({ data }) => {
+          setConnected(c => ({
+            ...c,
+            linkedin: !!(data as any)?.linkedin_session,
+            meta: !!(data as any)?.facebook_api_key,
+            gmaps: !!(data as any)?.google_maps_key,
+          }));
+        });
+    }
+  }, [team?.id]);
 
   const enableGmailSend = async () => {
     setBusy(true);
@@ -420,12 +433,52 @@ function Step7Connect({ progress, onBack, onNext }: any) {
     finally { setBusy(false); }
   };
 
+  const saveKey = async (column: string, flag: string, label: string) => {
+    if (!team?.id) return;
+    const value = (drafts[column] ?? "").trim();
+    if (!value) { toast.error(`Paste a value for ${label} first`); return; }
+    const { error } = await supabase.from("team_settings").update({ [column]: value } as any).eq("team_id", team.id);
+    if (error) { toast.error(error.message); return; }
+    setConnected(c => ({ ...c, [flag]: true }));
+    setDrafts(d => ({ ...d, [column]: "" }));
+    setOpen(o => ({ ...o, [flag]: false }));
+    toast.success(`${label} saved`);
+  };
 
+  const rows = [
+    {
+      flag: "linkedin", column: "linkedin_session",
+      icon: <span className="font-bold text-sm">in</span>,
+      name: "LinkedIn (for DM outreach)",
+      desc: "Paste your LinkedIn li_at session cookie so we can send DMs as you",
+      connectedDesc: "LinkedIn session saved — DMs enabled",
+      placeholder: "li_at cookie value",
+      help: <>Sign in to linkedin.com → open DevTools → Application → Cookies → copy the value of <code>li_at</code>.</>,
+    },
+    {
+      flag: "meta", column: "facebook_api_key",
+      icon: <span className="font-bold text-sm">f</span>,
+      name: "Meta / Facebook Graph token",
+      desc: "For Instagram + Facebook DM outreach and page enrichment",
+      connectedDesc: "Meta Graph token saved",
+      placeholder: "EAAG... access token",
+      help: <>Create an app at developers.facebook.com → Graph API Explorer → generate a token with <code>pages_messaging</code> + <code>instagram_basic</code>.</>,
+    },
+    {
+      flag: "gmaps", column: "google_maps_key",
+      icon: <span className="font-bold text-sm">G</span>,
+      name: "Google Maps API key",
+      desc: "Boosts Discovery with the paid Places directory (falls back to free scraping without it)",
+      connectedDesc: "Google Maps key saved",
+      placeholder: "AIza...",
+      help: <>Create at console.cloud.google.com → APIs & Services → Credentials, then enable the <b>Places API</b>.</>,
+    },
+  ] as const;
 
   return (
     <Card className="p-8">
       <h1 className="text-2xl font-bold mb-2">Connect your channels</h1>
-      <p className="text-muted-foreground text-sm mb-6">Wire up the accounts we'll use to surround your leads. You can add or change these anytime in Settings.</p>
+      <p className="text-muted-foreground text-sm mb-6">Wire up the accounts we'll use to surround your leads. All optional except email — you can add or rotate these anytime in Settings.</p>
 
       <div className="space-y-3">
         <ConnectRow
@@ -436,12 +489,39 @@ function Step7Connect({ progress, onBack, onNext }: any) {
           disabled={busy}
           onClick={enableGmailSend}
         />
-        <ConnectRow icon={<span className="font-bold text-sm">in</span>} name="LinkedIn API" desc="For DM outreach — add key in Settings > Social APIs (optional)" connected={false} disabled placeholder />
-        <ConnectRow icon={<span className="font-bold text-sm">f</span>} name="Meta / Facebook API" desc="For DM outreach — add key in Settings > Social APIs (optional)" connected={false} disabled placeholder />
-        <ConnectRow icon={<span className="font-bold text-sm">G</span>} name="Google Maps API" desc="For Discovery — add key in Settings > Discovery APIs (optional)" connected={false} disabled placeholder />
+
+        {rows.map(r => (
+          <div key={r.flag} className="rounded-lg border">
+            <ConnectRow
+              icon={r.icon}
+              name={r.name}
+              desc={connected[r.flag] ? r.connectedDesc : r.desc}
+              connected={!!connected[r.flag]}
+              onClick={() => setOpen(o => ({ ...o, [r.flag]: !o[r.flag] }))}
+              actionLabel={connected[r.flag] ? "Replace" : "Add key"}
+              bare
+            />
+            {open[r.flag] && (
+              <div className="border-t p-3 space-y-2 bg-muted/30">
+                <Label className="text-xs">API key / token</Label>
+                <Input
+                  type="password"
+                  placeholder={r.placeholder}
+                  value={drafts[r.column] ?? ""}
+                  onChange={e => setDrafts(d => ({ ...d, [r.column]: e.target.value }))}
+                />
+                <p className="text-[11px] text-muted-foreground">{r.help}</p>
+                <div className="flex gap-2 justify-end">
+                  <Button size="sm" variant="ghost" onClick={() => setOpen(o => ({ ...o, [r.flag]: false }))}>Cancel</Button>
+                  <Button size="sm" onClick={() => saveKey(r.column, r.flag, r.name)}>Save</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      <p className="text-xs text-muted-foreground mt-4">All optional except email. Your team admin can add API keys in Settings later.</p>
+      <p className="text-xs text-muted-foreground mt-4">Keys are stored on your team only. Rotate or remove them anytime from Settings.</p>
 
       <div className="flex gap-2 mt-8">
         <Button variant="outline" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
@@ -451,24 +531,29 @@ function Step7Connect({ progress, onBack, onNext }: any) {
   );
 }
 
-function ConnectRow({ icon, name, desc, connected, disabled, placeholder, onClick }: any) {
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border">
+function ConnectRow({ icon, name, desc, connected, disabled, placeholder, onClick, actionLabel, bare }: any) {
+  const inner = (
+    <div className="flex items-center gap-3 p-3">
       <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold">{name}</div>
         <div className="text-xs text-muted-foreground">{desc}</div>
       </div>
       {connected ? (
-        <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30" variant="outline">Connected</Badge>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30" variant="outline">Connected</Badge>
+          {onClick && <Button size="sm" variant="ghost" onClick={onClick}>{actionLabel ?? "Change"}</Button>}
+        </div>
       ) : placeholder ? (
         <Badge variant="outline" className="text-xs">Add later</Badge>
       ) : (
-        <Button size="sm" variant="outline" disabled={disabled} onClick={onClick}>Connect</Button>
+        <Button size="sm" variant="outline" disabled={disabled} onClick={onClick}>{actionLabel ?? "Connect"}</Button>
       )}
     </div>
   );
+  return bare ? inner : <div className="rounded-lg border">{inner}</div>;
 }
+
 
 // ---------------- Step 8: sample leads ----------------
 function Step8Sample({ progress, onBack, onNext }: any) {
