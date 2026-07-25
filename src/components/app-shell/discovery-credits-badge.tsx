@@ -31,8 +31,7 @@ export function DiscoveryCreditsBadge() {
 
   return (
     <Link
-      to="/account"
-      search={{ tab: "credits" } as any}
+      to="/credits"
       className={cn(
         "hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-lg border text-xs font-medium leading-none whitespace-nowrap transition-colors hover:brightness-110",
         tone,

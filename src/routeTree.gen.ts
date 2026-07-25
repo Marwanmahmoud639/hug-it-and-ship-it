@@ -39,6 +39,7 @@ import { Route as AppMonitorsRouteImport } from './routes/_app.monitors'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppDiscoveryRouteImport } from './routes/_app.discovery'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppContactsRouteImport } from './routes/_app.contacts'
 import { Route as AppCampaignsRouteImport } from './routes/_app.campaigns'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
@@ -216,6 +217,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCreditsRoute = AppCreditsRouteImport.update({
+  id: '/credits',
+  path: '/credits',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContactsRoute = AppContactsRouteImport.update({
   id: '/contacts',
   path: '/contacts',
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/automations': typeof AppAutomationsRoute
   '/campaigns': typeof AppCampaignsRoute
   '/contacts': typeof AppContactsRouteWithChildren
+  '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
   '/discovery': typeof AppDiscoveryRoute
   '/inbox': typeof AppInboxRoute
@@ -443,6 +450,7 @@ export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsRoute
   '/campaigns': typeof AppCampaignsRoute
   '/contacts': typeof AppContactsRouteWithChildren
+  '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
   '/discovery': typeof AppDiscoveryRoute
   '/inbox': typeof AppInboxRoute
@@ -504,6 +512,7 @@ export interface FileRoutesById {
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/contacts': typeof AppContactsRouteWithChildren
+  '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/discovery': typeof AppDiscoveryRoute
   '/_app/inbox': typeof AppInboxRoute
@@ -564,6 +573,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/campaigns'
     | '/contacts'
+    | '/credits'
     | '/dashboard'
     | '/discovery'
     | '/inbox'
@@ -622,6 +632,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/campaigns'
     | '/contacts'
+    | '/credits'
     | '/dashboard'
     | '/discovery'
     | '/inbox'
@@ -682,6 +693,7 @@ export interface FileRouteTypes {
     | '/_app/automations'
     | '/_app/campaigns'
     | '/_app/contacts'
+    | '/_app/credits'
     | '/_app/dashboard'
     | '/_app/discovery'
     | '/_app/inbox'
@@ -973,6 +985,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/credits': {
+      id: '/_app/credits'
+      path: '/credits'
+      fullPath: '/credits'
+      preLoaderRoute: typeof AppCreditsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/contacts': {
       id: '/_app/contacts'
       path: '/contacts'
@@ -1217,6 +1236,7 @@ interface AppRouteChildren {
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppContactsRoute: typeof AppContactsRouteWithChildren
+  AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiscoveryRoute: typeof AppDiscoveryRoute
   AppInboxRoute: typeof AppInboxRoute
@@ -1239,6 +1259,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAutomationsRoute: AppAutomationsRoute,
   AppCampaignsRoute: AppCampaignsRoute,
   AppContactsRoute: AppContactsRouteWithChildren,
+  AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDiscoveryRoute: AppDiscoveryRoute,
   AppInboxRoute: AppInboxRoute,
