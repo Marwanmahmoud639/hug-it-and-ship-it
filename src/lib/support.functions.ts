@@ -24,7 +24,7 @@ export const submitSupportRequest = createServerFn({ method: "POST" })
     const email = (claims as any)?.email ?? "";
     const { data: profile } = await supabase
       .from("profiles")
-      .select("team_id, full_name")
+      .select("team_id")
       .eq("id", userId)
       .maybeSingle();
     const teamId = profile?.team_id ?? null;
