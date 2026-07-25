@@ -1642,6 +1642,12 @@ async function runPipeline(searchId: string) {
       totalScore += score;
       scoredCount++;
 
+      const isBusinessOnly = !b.contact_name;
+      const verifiedSources: string[] = [];
+      if ((b.emails_found || []).length >= 2) verifiedSources.push("email_cross_verified");
+      if ((b.phones_found || []).length >= 2) verifiedSources.push("phone_cross_verified");
+      if ((b.sources || []).length >= 2) verifiedSources.push(...(b.sources || []).slice(0, 4));
+
       const contactRow: Record<string, unknown> = {
         team_id: teamId,
         name: b.contact_name || b.name,
@@ -1658,15 +1664,19 @@ async function runPipeline(searchId: string) {
         address: b.address || null,
         city: b.city || null,
         state: b.state || null,
-        country: b.country || null,
+        country: b.country || "US",
         email_verified: verifiedEmail,
         phone_verified: verifiedPhoneAny,
         verification_sources: b.sources,
-        lead_score: score,
+        lead_score: isBusinessOnly ? Math.min(score, 40) : score,
         source: "discovery",
         discovery_keyword: keyword,
         notes: b.description || null,
         auto_added_by_discovery: true,
+        business_only: isBusinessOnly,
+        dm_search_attempts: 1,
+        dm_last_retry_at: new Date().toISOString(),
+        business_verified_sources: Array.from(new Set(verifiedSources)),
         last_activity_at: new Date().toISOString(),
         // 90-day retention for discovery leads — cron purges untouched rows
         auto_purge_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
