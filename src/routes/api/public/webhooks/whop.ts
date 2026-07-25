@@ -131,6 +131,54 @@ export const Route = createFileRoute("/api/public/webhooks/whop")({
           await supabaseAdmin.from("signups").update({ status: signupStatus }).eq("id", resolvedSignupId);
         }
 
+        // Flip team from trial → active on successful payment / membership activation
+        const activate = subStatus === "active" || paymentStatus === "succeeded";
+        const deactivate = subStatus === "canceled" || paymentStatus === "refunded";
+        if (activate || deactivate) {
+          // Resolve user id from email if still unknown
+          let teamUserId = resolvedUserId;
+          if (!teamUserId && buyerEmail) {
+            const { data: prof } = await supabaseAdmin
+              .from("profiles")
+              .select("id, team_id")
+              .ilike("email", buyerEmail)
+              .maybeSingle();
+            if (prof) teamUserId = prof.id;
+          }
+          let teamId: string | null = null;
+          if (teamUserId) {
+            const { data: prof2 } = await supabaseAdmin
+              .from("profiles")
+              .select("team_id")
+              .eq("id", teamUserId)
+              .maybeSingle();
+            teamId = prof2?.team_id ?? null;
+          }
+          if (teamId) {
+            if (activate) {
+              const tier = (planSlug ?? "").toLowerCase();
+              const planTier =
+                tier.includes("agency") || tier.includes("enterprise") ? "agency"
+                : tier.includes("growth") || tier.includes("professional") ? "growth"
+                : "starter";
+              const contactLimit = planTier === "agency" ? 1_000_000 : planTier === "growth" ? 25_000 : 5_000;
+              const seatLimit = planTier === "agency" ? 10 : planTier === "growth" ? 3 : 1;
+              const discoveryLimit = planTier === "agency" ? 100_000 : planTier === "growth" ? 25_000 : 5_000;
+              await supabaseAdmin.from("teams").update({
+                plan: planTier,
+                plan_status: "active",
+                contact_limit: contactLimit,
+                seat_limit: seatLimit,
+                discovery_monthly_limit: discoveryLimit,
+                trial_ends_at: null,
+              }).eq("id", teamId);
+            } else if (deactivate) {
+              await supabaseAdmin.from("teams").update({ plan_status: "canceled" }).eq("id", teamId);
+            }
+          }
+        }
+
+
         // Legacy mirror (keep whop_purchases populated for now)
         if (whopPaymentId || whopMembershipId) {
           await supabaseAdmin.from("whop_purchases").upsert(
