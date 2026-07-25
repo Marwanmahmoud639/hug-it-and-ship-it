@@ -86,6 +86,7 @@ function RootComponent() {
         <AuthProvider>
           <SubdomainBrandBoot />
           <AnalyticsTracker />
+          <NativeBootstrap />
           <Outlet />
           <Toaster richColors position="bottom-right" closeButton />
         </AuthProvider>
