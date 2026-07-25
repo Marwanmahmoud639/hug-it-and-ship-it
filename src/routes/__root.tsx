@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
 import { SubdomainBrandBoot } from "@/components/SubdomainBrandBoot";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
-import { NativeBootstrap } from "@/components/NativeBootstrap";
+
 
 function NotFoundComponent() {
   return (
@@ -86,7 +86,7 @@ function RootComponent() {
         <AuthProvider>
           <SubdomainBrandBoot />
           <AnalyticsTracker />
-          <NativeBootstrap />
+          
           <Outlet />
           <Toaster richColors position="bottom-right" closeButton />
         </AuthProvider>

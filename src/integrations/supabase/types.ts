@@ -1694,45 +1694,6 @@ export type Database = {
           },
         ]
       }
-      device_tokens: {
-        Row: {
-          created_at: string
-          device_id: string | null
-          device_model: string | null
-          id: string
-          last_seen_at: string
-          os_version: string | null
-          platform: string
-          token: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_id?: string | null
-          device_model?: string | null
-          id?: string
-          last_seen_at?: string
-          os_version?: string | null
-          platform: string
-          token: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          device_id?: string | null
-          device_model?: string | null
-          id?: string
-          last_seen_at?: string
-          os_version?: string | null
-          platform?: string
-          token?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       dnc_suppression_list: {
         Row: {
           added_at: string

@@ -5,35 +5,6 @@ import { Capacitor } from "@capacitor/core";
 export const isNative = () => Capacitor.isNativePlatform();
 export const nativePlatform = () => Capacitor.getPlatform(); // "ios" | "android" | "web"
 
-// ---------- Push Notifications ----------
-export async function initPushNotifications(
-  onToken: (token: string, platform: "ios" | "android") => void | Promise<void>,
-  onNotification?: (payload: any) => void,
-) {
-  if (!isNative()) return;
-  const { PushNotifications } = await import("@capacitor/push-notifications");
-
-  let perm = await PushNotifications.checkPermissions();
-  if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
-    perm = await PushNotifications.requestPermissions();
-  }
-  if (perm.receive !== "granted") return;
-
-  await PushNotifications.register();
-
-  PushNotifications.addListener("registration", (t) => {
-    void onToken(t.value, nativePlatform() as "ios" | "android");
-  });
-  PushNotifications.addListener("registrationError", (e) => {
-    console.error("[push] registration error", e);
-  });
-  if (onNotification) {
-    PushNotifications.addListener("pushNotificationReceived", onNotification);
-    PushNotifications.addListener("pushNotificationActionPerformed", (a) =>
-      onNotification(a.notification),
-    );
-  }
-}
 
 // ---------- Camera ----------
 export async function takePhoto(): Promise<string | null> {
