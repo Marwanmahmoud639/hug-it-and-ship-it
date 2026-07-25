@@ -19,9 +19,6 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   plugins: {
-    PushNotifications: {
-      presentationOptions: ["badge", "sound", "alert"],
-    },
     LocalNotifications: {
       smallIcon: "ic_stat_icon_config_sample",
       iconColor: "#3B82F6",
