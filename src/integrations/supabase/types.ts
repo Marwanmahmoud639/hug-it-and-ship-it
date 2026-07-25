@@ -1397,6 +1397,8 @@ export type Database = {
           assigned_to: string | null
           auto_added_by_discovery: boolean
           auto_purge_at: string | null
+          business_only: boolean
+          business_verified_sources: string[]
           city: string | null
           company: string | null
           company_id: string | null
@@ -1410,6 +1412,8 @@ export type Database = {
           deal_value: number | null
           detected_timezone: string | null
           discovery_keyword: string | null
+          dm_last_retry_at: string | null
+          dm_search_attempts: number
           dnc_added_at: string | null
           dnc_reason: string | null
           do_not_contact: boolean
@@ -1465,6 +1469,8 @@ export type Database = {
           assigned_to?: string | null
           auto_added_by_discovery?: boolean
           auto_purge_at?: string | null
+          business_only?: boolean
+          business_verified_sources?: string[]
           city?: string | null
           company?: string | null
           company_id?: string | null
@@ -1478,6 +1484,8 @@ export type Database = {
           deal_value?: number | null
           detected_timezone?: string | null
           discovery_keyword?: string | null
+          dm_last_retry_at?: string | null
+          dm_search_attempts?: number
           dnc_added_at?: string | null
           dnc_reason?: string | null
           do_not_contact?: boolean
@@ -1533,6 +1541,8 @@ export type Database = {
           assigned_to?: string | null
           auto_added_by_discovery?: boolean
           auto_purge_at?: string | null
+          business_only?: boolean
+          business_verified_sources?: string[]
           city?: string | null
           company?: string | null
           company_id?: string | null
@@ -1546,6 +1556,8 @@ export type Database = {
           deal_value?: number | null
           detected_timezone?: string | null
           discovery_keyword?: string | null
+          dm_last_retry_at?: string | null
+          dm_search_attempts?: number
           dnc_added_at?: string | null
           dnc_reason?: string | null
           do_not_contact?: boolean
