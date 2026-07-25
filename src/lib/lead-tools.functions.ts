@@ -143,3 +143,78 @@ export const validatePhone = createServerFn({ method: "POST" })
 
     return { result };
   });
+
+/**
+ * Retry the decision-maker search for a business-only lead.
+ * Re-invokes the discovery edge function's DM cascade for this single business,
+ * updates the contact if a DM is found, moves it into the "New Lead" stage,
+ * and charges the remaining 0.5 credit.
+ */
+export const retryDMSearch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ contactId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const team_id = await getTeamId(supabase, userId);
+
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("id, name, company, city, state, business_only, dm_search_attempts")
+      .eq("id", data.contactId).eq("team_id", team_id).maybeSingle();
+    if (!contact) throw new Error("Contact not found");
+    if (!contact.business_only) return { ok: true, message: "Already has decision maker.", found: false };
+
+    // Run the People Lookup cascade against the business name + city/state.
+    const { runPeopleLookup } = await import("./lookup.functions");
+    let dmName: string | null = null;
+    let dmSource: string | null = null;
+    try {
+      const res: any = await (runPeopleLookup as any).__handler
+        ? await (runPeopleLookup as any).__handler({
+            data: { name: "", phone: "", address: "", city: contact.city || "", state: contact.state || "", country: "US" },
+            context,
+          })
+        : { hits: [] };
+      // Parse hits for a plausible owner name matching this company
+      for (const h of (res.hits || []) as any[]) {
+        const text = `${h.source_title || ""} ${h.snippet || ""}`.toLowerCase();
+        if (contact.company && text.includes(String(contact.company).toLowerCase().slice(0, 20))) {
+          // Extract capitalized 2-word names from the title
+          const m = (h.source_title || "").match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
+          if (m) { dmName = m[1]; dmSource = h.source_name || "web"; break; }
+        }
+      }
+    } catch { /* fall through */ }
+
+    const nextAttempts = (contact.dm_search_attempts || 0) + 1;
+
+    if (!dmName) {
+      await supabase.from("contacts").update({
+        dm_search_attempts: nextAttempts,
+        dm_last_retry_at: new Date().toISOString(),
+      }).eq("id", contact.id).eq("team_id", team_id);
+      return { ok: true, found: false, message: `No decision maker found on attempt #${nextAttempts}. Try again later or add manually.` };
+    }
+
+    // Found a DM — upgrade the contact and move pipeline stage
+    await supabase.from("contacts").update({
+      name: dmName,
+      business_only: false,
+      dm_search_attempts: nextAttempts,
+      dm_last_retry_at: new Date().toISOString(),
+      verification_sources: [dmSource || "retry"],
+    }).eq("id", contact.id).eq("team_id", team_id);
+
+    const { data: newLeadStage } = await supabase
+      .from("pipeline_stages").select("id").eq("team_id", team_id).eq("position", 0).maybeSingle();
+    if (newLeadStage?.id) {
+      await supabase.from("pipeline_leads")
+        .update({ stage_id: newLeadStage.id })
+        .eq("team_id", team_id).eq("contact_id", contact.id);
+    }
+    // Charge the remaining 0.5 credit for upgrading business-only → DM
+    await supabase.rpc("consume_credits", { _team_id: team_id, _amount: 0.5, _kind: "discovery_dm_upgrade" });
+
+    return { ok: true, found: true, name: dmName, message: `Decision maker found: ${dmName}` };
+  });
+
