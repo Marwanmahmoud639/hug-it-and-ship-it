@@ -5,8 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Flame, ShieldAlert, Play, Square, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Flame, ShieldAlert, Play, Square, CheckCircle2, AlertTriangle, Plus, X } from "lucide-react";
 import { listWarmupStatus, startWarmup, stopWarmup, flagWarmup, acknowledgeWarmupFlag } from "@/lib/email-warmup.functions";
+import { addEmailAccount } from "@/lib/email-accounts.functions";
 
 const RAMP = [5, 10, 20, 40, 60, 80, 100];
 
