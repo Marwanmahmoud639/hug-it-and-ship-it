@@ -1583,6 +1583,8 @@ async function runPipeline(searchId: string) {
     const threshold = (settings?.auto_pipeline_threshold as number) ?? 70;
     const { data: newLeadStage } = await SUPABASE
       .from("pipeline_stages").select("id").eq("team_id", teamId).eq("position", 0).maybeSingle();
+    const { data: needsDmStage } = await SUPABASE
+      .from("pipeline_stages").select("id").eq("team_id", teamId).eq("name", "Needs DM Research").maybeSingle();
 
     let autoAdded = 0;
     let totalScore = 0;
