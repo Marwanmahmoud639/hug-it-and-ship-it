@@ -349,74 +349,92 @@ async function queryReddit(keyword: string, subreddits: string[], limit = 30): P
   }
 }
 
-async function queryGooglePeople(keyword: string, location: string, apiKey: string): Promise<Individual[]> {
-  const res = await fetch("https://google.serper.dev/search", {
-    method: "POST",
-    headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: `${keyword} ${location}`, type: "profile", num: 30 }),
-  });
-  if (!res.ok) throw new Error(`serper/google ${res.status}`);
-  const data = await res.json();
-  const profiles = data.profiles || data.peopleResults || [];
-  return profiles.slice(0, 30).map((p: any): Individual => ({
-    full_name: p.name || p.title || "Unknown",
-    first_name: (p.name || "").split(" ")[0],
-    last_name: (p.name || "").split(" ").slice(1).join(" "),
-    role: p.description || p.subtitle || "Unknown",
-    city: p.location || location.split(",")[0]?.trim(),
-    confidence: 50,
-    sources: ["google"],
-    raw: { google_profile: p },
-  }));
+async function queryGooglePeople(keyword: string, location: string, apiKey: string | null): Promise<Individual[]> {
+  // "profile" answer box only comes from Serper; when we don't have a key we
+  // fall through to organic web results via DDG below.
+  if (apiKey) {
+    try {
+      const res = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q: `${keyword} ${location}`, type: "profile", num: 30 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const profiles = data.profiles || data.peopleResults || [];
+        if (profiles.length) {
+          return profiles.slice(0, 30).map((p: any): Individual => ({
+            full_name: p.name || p.title || "Unknown",
+            first_name: (p.name || "").split(" ")[0],
+            last_name: (p.name || "").split(" ").slice(1).join(" "),
+            role: p.description || p.subtitle || "Unknown",
+            city: p.location || location.split(",")[0]?.trim(),
+            confidence: 50,
+            sources: ["google"],
+            raw: { google_profile: p },
+          }));
+        }
+      }
+    } catch { /* fall through to DDG */ }
+  }
+  // DDG fallback — extract name-shaped titles from organic results.
+  const items = await duckSearchOrganic(`${keyword} ${location} owner OR founder OR broker`, 20);
+  const out: Individual[] = [];
+  for (const r of items) {
+    const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
+    const cand = titleParts[0] || "";
+    const words = cand.trim().split(/\s+/);
+    if (words.length < 2 || words.length > 5 || /^[\d\W]+$/.test(cand)) continue;
+    out.push({
+      full_name: cand, first_name: words[0], last_name: words.slice(1).join(" "),
+      role: "Unknown", city: location.split(",")[0]?.trim(),
+      confidence: 40, sources: ["ddg_google"], raw: { ddg: r },
+    });
+  }
+  return out.slice(0, 25);
 }
 
-async function querySerperIndividuals(keyword: string, location: string, platform: "linkedin" | "facebook" | "twitter" | "instagram", apiKey: string): Promise<Individual[]> {
+async function querySerperIndividuals(keyword: string, location: string, platform: "linkedin" | "facebook" | "twitter" | "instagram", apiKey: string | null): Promise<Individual[]> {
   const siteMap = {
     linkedin: "site:linkedin.com/in",
-    facebook: "site:facebook.com", // includes groups and profiles
+    facebook: "site:facebook.com",
     twitter: "site:twitter.com OR site:x.com",
-    instagram: "site:instagram.com"
+    instagram: "site:instagram.com",
   };
   const q = `${siteMap[platform]} "${keyword}"${location ? ` "${location}"` : ""}`;
   try {
-    const res = await fetch("https://google.serper.dev/search", {
-      method: "POST",
-      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ q, num: 20 }),
-    });
-    if (!res.ok) throw new Error(`serper/${platform} ${res.status}`);
-    const data = await res.json();
-    const organic = data.organic || [];
+    const organic = await unifiedSearch(q, apiKey || null, 20);
     const individuals: Individual[] = [];
-    
     for (const r of organic) {
       const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
       const candidateName = titleParts[0] || "";
       const words = candidateName.trim().split(/\s+/);
       if (words.length < 2 || words.length > 5 || /^[\d\W]+$/.test(candidateName)) continue;
-      
+
       const ind: Individual = {
         full_name: candidateName,
         first_name: words[0],
         last_name: words.slice(1).join(" "),
         role: "Unknown",
-        confidence: 45,
-        sources: [`serper_${platform}`],
-        raw: { serper: r }
+        confidence: apiKey ? 45 : 38,
+        sources: [`${apiKey ? "serper" : "ddg"}_${platform}`],
+        raw: { search: r },
       };
-      
+
       if (platform === "linkedin") ind.linkedin_url = r.link;
       if (platform === "facebook") ind.facebook_url = r.link;
       if (platform === "twitter") ind.twitter_url = r.link;
       if (platform === "instagram") ind.instagram_url = r.link;
-      
+
       individuals.push(ind);
     }
     return individuals;
-  } catch (e) {
+  } catch {
     return [];
   }
 }
+
+
 
 async function geocodeLocation(location: string, googleMapsKey: string) {
   try {
