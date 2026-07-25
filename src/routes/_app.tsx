@@ -31,10 +31,10 @@ function AppLayout() {
 
   const agentBlocked = ["/discovery", "/analytics", "/team", "/campaigns", "/settings", "/workflows", "/proposals", "/monitors", "/portals"];
   const managerBlocked = ["/team"];
-  if (role === "agent" && agentBlocked.some(p => pathname.startsWith(p))) {
+  if (!isSuperAdmin && role === "agent" && agentBlocked.some(p => pathname.startsWith(p))) {
     return <Navigate to="/dashboard" />;
   }
-  if (role === "manager" && managerBlocked.some(p => pathname.startsWith(p))) {
+  if (!isSuperAdmin && role === "manager" && managerBlocked.some(p => pathname.startsWith(p))) {
     return <Navigate to="/dashboard" />;
   }
 
