@@ -56,7 +56,8 @@ function PricingPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {plans.map((p, i) => {
               const featured = p.slug === "professional" || (plans.length === 3 && i === 1);
-              const href = p.whop_checkout_url ?? "#";
+              const isEnterprise = p.slug === "enterprise" || !p.whop_checkout_url;
+              const href = isEnterprise ? "/enterprise" : (p.whop_checkout_url ?? "#");
               return (
                 <div
                   key={p.slug}
@@ -73,27 +74,45 @@ function PricingPage() {
                   )}
                   <h3 className="font-bold text-xl text-white">{p.name}</h3>
                   <p className="text-sm text-zinc-400 mt-1">{p.seats} seat{p.seats > 1 ? "s" : ""}</p>
-                  {p.trial_days && p.trial_days > 0 && (
+                  {p.trial_days && p.trial_days > 0 && !isEnterprise && (
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 text-xs font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {p.trial_days}-day free trial
                     </div>
                   )}
                   <div className="mt-6 flex items-baseline gap-1">
-                    <span className="text-5xl font-black text-white">${Number(p.price_monthly)}</span>
-                    <span className="text-zinc-500">/mo</span>
+                    {isEnterprise ? (
+                      <>
+                        <span className="text-4xl font-black text-white">Custom</span>
+                        <span className="text-zinc-500 ml-1">pricing</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-5xl font-black text-white">${Number(p.price_monthly)}</span>
+                        <span className="text-zinc-500">/mo</span>
+                      </>
+                    )}
                   </div>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition ${
-                      featured
-                        ? "r4d-bg-lime hover:opacity-90 text-black"
-                        : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
-                    }`}
-                  >
-                    Checkout {p.name} <ArrowRight className="w-4 h-4" />
-                  </a>
+                  {isEnterprise ? (
+                    <Link
+                      to="/enterprise"
+                      className="mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition bg-white text-black hover:bg-white/90"
+                    >
+                      Book a call <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  ) : (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition ${
+                        featured
+                          ? "r4d-bg-lime hover:opacity-90 text-black"
+                          : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                      }`}
+                    >
+                      Checkout {p.name} <ArrowRight className="w-4 h-4" />
+                    </a>
+                  )}
                   <ul className="mt-8 space-y-3">
                     {(p.features ?? []).map((f) => (
                       <li key={f} className="flex items-start gap-3 text-sm text-zinc-300">
