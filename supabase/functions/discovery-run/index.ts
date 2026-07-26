@@ -565,6 +565,29 @@ async function hunterEmailFinder(firstName: string, lastName: string, domain: st
   }
 }
 
+// Hunter combined/find — enriches a known email with person + company data
+async function hunterCombinedFind(email: string, apiKey: string): Promise<{ first_name?: string; last_name?: string; position?: string; linkedin?: string; company?: string } | null> {
+  try {
+    const params = new URLSearchParams({ email, api_key: apiKey });
+    const res = await fetch(`https://api.hunter.io/v2/combined/find?${params}`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const person = data?.data?.person;
+    const company = data?.data?.company;
+    if (!person && !company) return null;
+    return {
+      first_name: person?.name?.givenName,
+      last_name: person?.name?.familyName,
+      position: person?.employment?.title,
+      linkedin: person?.linkedin?.handle ? `https://linkedin.com/in/${person.linkedin.handle}` : undefined,
+      company: company?.name,
+    };
+  } catch {
+    return null;
+  }
+}
+
+
 // ─── FREE decision-maker hunt via Serper (LinkedIn / BiggerPockets / FB / web)
 // ─── Free web search (no API key) ────────────────────────────────────────────
 // Unified search that prefers Serper (if key present), else DuckDuckGo HTML,
@@ -1480,6 +1503,22 @@ async function runPipeline(searchId: string) {
               console.error("skiptrace hunter error", b.name, String(e).slice(0, 200));
             }
           }
+
+          // ② Free: Hunter combined/find — enrich a known email → person + title + LinkedIn
+          if (!b.contact_name && hunterKey && (b.emails_found?.length ?? 0) > 0 && Date.now() < perBizDeadline) {
+            try {
+              const enriched = await hunterCombinedFind(b.emails_found![0].email, hunterKey);
+              if (enriched?.first_name && enriched?.last_name) {
+                b.contact_name = `${enriched.first_name} ${enriched.last_name}`.trim();
+                b.contact_title = enriched.position || b.contact_title;
+                if (enriched.linkedin && !b.linkedin_url) b.linkedin_url = enriched.linkedin;
+                if (!stOk.includes("hunter")) stOk.push("hunter");
+              }
+            } catch (e) {
+              console.error("hunter combined/find error", b.name, String(e).slice(0, 200));
+            }
+          }
+
         } catch (e) {
           // Catch-all so one bad business never breaks the whole skiptrace step
           skiptraceErrors++;
