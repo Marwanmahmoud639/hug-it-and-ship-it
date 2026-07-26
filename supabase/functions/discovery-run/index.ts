@@ -1503,6 +1503,22 @@ async function runPipeline(searchId: string) {
               console.error("skiptrace hunter error", b.name, String(e).slice(0, 200));
             }
           }
+
+          // ② Free: Hunter combined/find — enrich a known email → person + title + LinkedIn
+          if (!b.contact_name && hunterKey && (b.emails_found?.length ?? 0) > 0 && Date.now() < perBizDeadline) {
+            try {
+              const enriched = await hunterCombinedFind(b.emails_found![0].email, hunterKey);
+              if (enriched?.first_name && enriched?.last_name) {
+                b.contact_name = `${enriched.first_name} ${enriched.last_name}`.trim();
+                b.contact_title = enriched.position || b.contact_title;
+                if (enriched.linkedin && !b.linkedin_url) b.linkedin_url = enriched.linkedin;
+                if (!stOk.includes("hunter")) stOk.push("hunter");
+              }
+            } catch (e) {
+              console.error("hunter combined/find error", b.name, String(e).slice(0, 200));
+            }
+          }
+
         } catch (e) {
           // Catch-all so one bad business never breaks the whole skiptrace step
           skiptraceErrors++;
