@@ -150,7 +150,6 @@ export const runPeopleLookup = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile } = await supabase
       .from("profiles")
       .select("team_id")
@@ -168,7 +167,7 @@ export const runPeopleLookup = createServerFn({ method: "POST" })
       cc: data.country,
     });
 
-    const { data: cached } = await supabaseAdmin
+    const { data: cached } = await supabase
       .from("ai_lookup_cache")
       .select("result, created_at, source")
       .eq("query_hash", cacheKey)
@@ -218,7 +217,7 @@ export const runPeopleLookup = createServerFn({ method: "POST" })
       fetched_at: new Date().toISOString(),
     };
 
-    await supabaseAdmin.from("ai_lookup_cache").insert({
+    await supabase.from("ai_lookup_cache").insert({
       query_hash: cacheKey,
       query: data as any,
       result: result as any,
