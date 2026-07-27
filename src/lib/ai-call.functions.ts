@@ -243,6 +243,16 @@ export const startAiCall = createServerFn({ method: "POST" })
       throw new Error(reason);
     };
 
+    // Commercial gate first: has this account actually paid for AI calling?
+    // Checked server-side because hiding the button doesn't stop a direct call
+    // to this function.
+    const { assertEntitled } = await import("@/lib/entitlements.server");
+    try {
+      await assertEntitled(teamId, "ai_caller");
+    } catch (e) {
+      await reject(String(e instanceof Error ? e.message : e));
+    }
+
     if (!settings?.ai_calls_enabled) {
       await reject("AI calling is turned off for this team. Enable it in Settings after confirming your consent basis.");
     }
