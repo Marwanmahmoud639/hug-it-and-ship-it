@@ -183,3 +183,166 @@ export const checkCallCompliance = createServerFn({ method: "POST" })
 
     return { allowed: true, timezone, localTime: time };
   });
+
+/**
+ * Place an autonomous AI call.
+ *
+ * Runs the same compliance gate as checkCallCompliance — deliberately re-run
+ * here rather than trusting a result the client passed back, since time may
+ * have moved past the window and a client-supplied verdict is forgeable.
+ */
+export const startAiCall = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      phone: z.string().min(7).max(25),
+      contactId: z.string().uuid().optional(),
+      agentId: z.string().uuid().optional(),
+      consentBasis: z.enum(["prior_express_written", "existing_business_relationship"]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: profile } = await supabase
+      .from("profiles").select("team_id").eq("id", userId).maybeSingle();
+    if (!profile?.team_id) throw new Error("No team");
+    const teamId = profile.team_id;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: team } = await (supabaseAdmin as any)
+      .from("teams").select("name").eq("id", teamId).maybeSingle();
+    const { data: settings } = await (supabaseAdmin as any)
+      .from("team_settings")
+      .select("ai_calls_enabled, ai_call_window_start_hour, ai_call_window_end_hour, ai_call_disclosure")
+      .eq("team_id", teamId)
+      .maybeSingle();
+
+    // Record the attempt before any gate can reject it, so a blocked call
+    // leaves evidence it was stopped rather than vanishing.
+    const writeSession = async (fields: Record<string, unknown>) => {
+      const { data: row } = await (supabaseAdmin as any)
+        .from("ai_call_sessions")
+        .insert({
+          team_id: teamId,
+          started_by: userId,
+          contact_id: data.contactId ?? null,
+          agent_id: data.agentId ?? null,
+          to_number: data.phone,
+          from_number: "",
+          consent_basis: data.consentBasis,
+          dnc_checked_at: new Date().toISOString(),
+          ...fields,
+        })
+        .select("id")
+        .single();
+      return row?.id as string | undefined;
+    };
+
+    const reject = async (reason: string, extra: Record<string, unknown> = {}) => {
+      await writeSession({ status: "blocked", block_reason: reason, ...extra });
+      throw new Error(reason);
+    };
+
+    if (!settings?.ai_calls_enabled) {
+      await reject("AI calling is turned off for this team. Enable it in Settings after confirming your consent basis.");
+    }
+
+    const { data: suppressed } = await (supabaseAdmin as any)
+      .rpc("is_number_suppressed", { _team_id: teamId, _phone: data.phone });
+    if (suppressed === true) await reject("This number is on your suppression list.");
+
+    const area = areaCodeOf(data.phone);
+    const timezone = area ? AREA_CODE_TZ[area] : undefined;
+    if (!timezone) {
+      await reject("Could not determine the recipient's timezone from this number, so the calling window can't be verified.");
+    }
+
+    const { hour, time } = localHourIn(timezone!);
+    const start = settings.ai_call_window_start_hour ?? 9;
+    const end = settings.ai_call_window_end_hour ?? 20;
+    if (hour < start || hour >= end) {
+      await reject(
+        `It's ${time} for this contact (${timezone}). Calls are only allowed between ${start}:00 and ${end}:00 local time.`,
+        { called_party_timezone: timezone, local_call_time: time },
+      );
+    }
+
+    // Dial through whatever carrier the team configured.
+    const { loadActiveProviderForTeam } = await import("@/lib/dialer/registry");
+    const active = await loadActiveProviderForTeam(teamId);
+    const fromNumber = active?.row.from_number ?? process.env.TWILIO_CALLER_ID ?? "";
+    const accountSid = (active?.row.credentials as any)?.account_sid ?? process.env.TWILIO_ACCOUNT_SID;
+    const authToken = (active?.row.credentials as any)?.auth_token ?? process.env.TWILIO_AUTH_TOKEN;
+    if (!accountSid || !authToken || !fromNumber) {
+      await reject("No dialer provider configured. Add one in Settings → Dialer Providers.");
+    }
+
+    const disclosure = (settings.ai_call_disclosure ?? "")
+      .replace(/\{company\}/gi, team?.name ?? "our team");
+
+    const sessionId = await writeSession({
+      status: "dialing",
+      from_number: fromNumber,
+      disclosure_text: disclosure,
+      called_party_timezone: timezone,
+      local_call_time: time,
+    });
+    if (!sessionId) throw new Error("Could not create call session");
+
+    // Twilio fetches this TwiML on answer; it points at the media bridge.
+    const origin = process.env.PUBLIC_APP_ORIGIN ?? "";
+    const twimlUrl = `${origin}/api/public/twilio/ai-stream?session=${sessionId}`;
+
+    const body = new URLSearchParams({
+      To: data.phone,
+      From: fromNumber,
+      Url: twimlUrl,
+      // Twilio gives up if nobody answers; 30s is roughly six rings.
+      Timeout: "30",
+      MachineDetection: "Enable",
+    });
+
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      },
+    );
+    const json = await res.json();
+    if (!res.ok) {
+      const msg = json?.message ?? "Carrier rejected the call";
+      await (supabaseAdmin as any)
+        .from("ai_call_sessions")
+        .update({ status: "failed", block_reason: msg, ended_at: new Date().toISOString() })
+        .eq("id", sessionId);
+      throw new Error(msg);
+    }
+
+    await (supabaseAdmin as any)
+      .from("ai_call_sessions")
+      .update({ provider_call_sid: json.sid })
+      .eq("id", sessionId);
+
+    return { sessionId, callSid: json.sid as string, timezone, localTime: time };
+  });
+
+export const listAiCalls = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: profile } = await supabase
+      .from("profiles").select("team_id").eq("id", userId).maybeSingle();
+    if (!profile?.team_id) return { calls: [] };
+    const { data } = await (supabase as any)
+      .from("ai_call_sessions")
+      .select("id, to_number, status, block_reason, outcome, duration_seconds, called_party_timezone, created_at")
+      .eq("team_id", profile.team_id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return { calls: data ?? [] };
+  });

@@ -9,6 +9,7 @@ import {
   chatWithAgent, saveTrainingSession,
   startCall, updateCall, listCallRuns, getCallStats, learnFromCall,
 } from "@/lib/voice-agent.functions";
+import { checkCallCompliance, startAiCall, listAiCalls } from "@/lib/ai-call.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -214,8 +215,10 @@ function AgentWorkspace({ agent, onRefresh }: { agent: Agent; onRefresh: () => v
         <TabsTrigger value="training"><Mic className="w-4 h-4 mr-1" /> Training studio</TabsTrigger>
         <TabsTrigger value="objections"><MessageSquare className="w-4 h-4 mr-1" /> Objections</TabsTrigger>
         <TabsTrigger value="calls"><PhoneCall className="w-4 h-4 mr-1" /> Calls</TabsTrigger>
+        <TabsTrigger value="live"><PhoneCall className="w-4 h-4 mr-1" /> Live AI Call</TabsTrigger>
         <TabsTrigger value="stats"><BarChart3 className="w-4 h-4 mr-1" /> Intelligence</TabsTrigger>
       </TabsList>
+      <TabsContent value="live"><LiveAiCallTab agent={agent} /></TabsContent>
       <TabsContent value="agent"><AgentTab agent={agent} onRefresh={onRefresh} /></TabsContent>
       <TabsContent value="knowledge"><KnowledgeTab agent={agent} /></TabsContent>
       <TabsContent value="training"><TrainingStudio agent={agent} /></TabsContent>
@@ -650,6 +653,167 @@ function StatsTab({ agent }: { agent: Agent }) {
           <div className="text-2xl font-semibold mt-1">{c.value}</div>
         </Card>
       ))}
+    </div>
+  );
+}
+
+// ─── Live AI calling ─────────────────────────────────────────────────────────
+// Places a real outbound call where the AI, not a human, holds the
+// conversation. Every gate that can refuse the call runs server-side; this UI
+// surfaces the verdict early so a rep isn't surprised after clicking Call.
+function LiveAiCallTab({ agent }: { agent: Agent }) {
+  const check = useServerFn(checkCallCompliance);
+  const start = useServerFn(startAiCall);
+  const listCalls = useServerFn(listAiCalls);
+  const qc = useQueryClient();
+
+  const [phone, setPhone] = useState("");
+  const [consent, setConsent] = useState<"prior_express_written" | "existing_business_relationship">("prior_express_written");
+  const [gate, setGate] = useState<any>(null);
+  const [attested, setAttested] = useState(false);
+
+  const { data: callsData } = useQuery({
+    queryKey: ["ai-calls"],
+    queryFn: () => listCalls(),
+    refetchInterval: 5000,
+  });
+
+  const checkMut = useMutation({
+    mutationFn: () => check({ data: { phone } }),
+    onSuccess: (r: any) => setGate(r),
+    onError: (e: any) => toast.error(e?.message ?? "Check failed"),
+  });
+
+  const callMut = useMutation({
+    mutationFn: () => start({ data: { phone, agentId: agent.id, consentBasis: consent } }),
+    onSuccess: () => {
+      toast.success("Calling — the AI will open with the required disclosure.");
+      setPhone(""); setGate(null); setAttested(false);
+      qc.invalidateQueries({ queryKey: ["ai-calls"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Call failed"),
+  });
+
+  const calls = callsData?.calls ?? [];
+
+  return (
+    <div className="space-y-4 mt-4">
+      <Card className="p-5 space-y-4">
+        <div className="text-xs bg-amber-500/10 text-amber-500/90 rounded-lg p-3">
+          An AI voice is an "artificial voice" under the TCPA (FCC ruling, Feb 2024). Calls
+          need a lawful consent basis, must fall inside the recipient's local calling window,
+          and the AI must identify itself — it will do so automatically on its first turn.
+          Confirm your consent basis with counsel before dialling real prospects.
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-1.5">
+            <Label>Phone number</Label>
+            <Input
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setGate(null); setAttested(false); }}
+              placeholder="+1 (555) 123-4567"
+              maxLength={25}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Consent basis</Label>
+            <Select value={consent} onValueChange={(v) => setConsent(v as typeof consent)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="prior_express_written">Prior express written consent</SelectItem>
+                <SelectItem value="existing_business_relationship">Existing business relationship</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => checkMut.mutate()}
+            disabled={checkMut.isPending || phone.trim().length < 7}
+          >
+            {checkMut.isPending ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Checking…</> : "Check eligibility"}
+          </Button>
+
+          {gate && (
+            <span className={cn("text-xs", gate.allowed ? "text-emerald-500" : "text-destructive")}>
+              {gate.allowed
+                ? `Allowed — ${gate.localTime} local (${gate.timezone})`
+                : gate.reason}
+            </span>
+          )}
+        </div>
+
+        {gate?.allowed && (
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={attested}
+              onChange={(e) => setAttested(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              I confirm this contact has given the consent basis selected above, and that
+              this call is permitted under applicable federal and state law.
+            </span>
+          </label>
+        )}
+
+        <div>
+          <Button
+            onClick={() => callMut.mutate()}
+            disabled={!gate?.allowed || !attested || callMut.isPending}
+          >
+            {callMut.isPending
+              ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Dialing…</>
+              : <><PhoneCall className="w-4 h-4 mr-1.5" /> Start AI call</>}
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="p-4 font-semibold text-sm">Recent AI calls</div>
+        {calls.length === 0 ? (
+          <div className="px-4 pb-4 text-sm text-muted-foreground">No AI calls yet.</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="p-3">Number</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Duration</th>
+                <th className="p-3">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calls.map((c: any) => (
+                <tr key={c.id} className="border-t border-border">
+                  <td className="p-3">{c.to_number}</td>
+                  <td className="p-3">
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px]",
+                        c.status === "blocked" && "text-destructive",
+                        c.status === "completed" && "text-emerald-500")}
+                    >
+                      {c.status}
+                    </Badge>
+                    {c.block_reason && (
+                      <div className="text-[11px] text-muted-foreground mt-0.5 max-w-md">{c.block_reason}</div>
+                    )}
+                  </td>
+                  <td className="p-3">{c.duration_seconds ? `${c.duration_seconds}s` : "—"}</td>
+                  <td className="p-3 text-xs text-muted-foreground">
+                    {new Date(c.created_at).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </div>
   );
 }

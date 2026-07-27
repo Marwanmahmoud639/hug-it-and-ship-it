@@ -61,6 +61,7 @@ import { Route as ApiPublicWebhooksWhopRouteImport } from './routes/api/public/w
 import { Route as ApiPublicWebhooksInboundSmsRouteImport } from './routes/api/public/webhooks/inbound-sms'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsInboundRouteImport } from './routes/api/public/twilio/sms-inbound'
+import { Route as ApiPublicTwilioAiStreamRouteImport } from './routes/api/public/twilio/ai-stream'
 import { Route as ApiPublicHooksWarmupTickRouteImport } from './routes/api/public/hooks/warmup-tick'
 import { Route as ApiPublicHooksRunWorkflowJobsRouteImport } from './routes/api/public/hooks/run-workflow-jobs'
 import { Route as ApiPublicHooksRunTaskRemindersRouteImport } from './routes/api/public/hooks/run-task-reminders'
@@ -333,6 +334,11 @@ const ApiPublicTwilioSmsInboundRoute =
     path: '/api/public/twilio/sms-inbound',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTwilioAiStreamRoute = ApiPublicTwilioAiStreamRouteImport.update({
+  id: '/api/public/twilio/ai-stream',
+  path: '/api/public/twilio/ai-stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksWarmupTickRoute =
   ApiPublicHooksWarmupTickRouteImport.update({
     id: '/api/public/hooks/warmup-tick',
@@ -446,6 +452,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
   '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
   '/api/public/hooks/warmup-tick': typeof ApiPublicHooksWarmupTickRoute
+  '/api/public/twilio/ai-stream': typeof ApiPublicTwilioAiStreamRoute
   '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
@@ -508,6 +515,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
   '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
   '/api/public/hooks/warmup-tick': typeof ApiPublicHooksWarmupTickRoute
+  '/api/public/twilio/ai-stream': typeof ApiPublicTwilioAiStreamRoute
   '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
@@ -573,6 +581,7 @@ export interface FileRoutesById {
   '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
   '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
   '/api/public/hooks/warmup-tick': typeof ApiPublicHooksWarmupTickRoute
+  '/api/public/twilio/ai-stream': typeof ApiPublicTwilioAiStreamRoute
   '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
@@ -637,6 +646,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/run-task-reminders'
     | '/api/public/hooks/run-workflow-jobs'
     | '/api/public/hooks/warmup-tick'
+    | '/api/public/twilio/ai-stream'
     | '/api/public/twilio/sms-inbound'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
@@ -699,6 +709,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/run-task-reminders'
     | '/api/public/hooks/run-workflow-jobs'
     | '/api/public/hooks/warmup-tick'
+    | '/api/public/twilio/ai-stream'
     | '/api/public/twilio/sms-inbound'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
@@ -763,6 +774,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/run-task-reminders'
     | '/api/public/hooks/run-workflow-jobs'
     | '/api/public/hooks/warmup-tick'
+    | '/api/public/twilio/ai-stream'
     | '/api/public/twilio/sms-inbound'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
@@ -801,6 +813,7 @@ export interface RootRouteChildren {
   ApiPublicHooksRunTaskRemindersRoute: typeof ApiPublicHooksRunTaskRemindersRoute
   ApiPublicHooksRunWorkflowJobsRoute: typeof ApiPublicHooksRunWorkflowJobsRoute
   ApiPublicHooksWarmupTickRoute: typeof ApiPublicHooksWarmupTickRoute
+  ApiPublicTwilioAiStreamRoute: typeof ApiPublicTwilioAiStreamRoute
   ApiPublicTwilioSmsInboundRoute: typeof ApiPublicTwilioSmsInboundRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicWebhooksInboundSmsRoute: typeof ApiPublicWebhooksInboundSmsRoute
@@ -1177,6 +1190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioSmsInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio/ai-stream': {
+      id: '/api/public/twilio/ai-stream'
+      path: '/api/public/twilio/ai-stream'
+      fullPath: '/api/public/twilio/ai-stream'
+      preLoaderRoute: typeof ApiPublicTwilioAiStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/warmup-tick': {
       id: '/api/public/hooks/warmup-tick'
       path: '/api/public/hooks/warmup-tick'
@@ -1379,6 +1399,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksRunTaskRemindersRoute: ApiPublicHooksRunTaskRemindersRoute,
   ApiPublicHooksRunWorkflowJobsRoute: ApiPublicHooksRunWorkflowJobsRoute,
   ApiPublicHooksWarmupTickRoute: ApiPublicHooksWarmupTickRoute,
+  ApiPublicTwilioAiStreamRoute: ApiPublicTwilioAiStreamRoute,
   ApiPublicTwilioSmsInboundRoute: ApiPublicTwilioSmsInboundRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicWebhooksInboundSmsRoute: ApiPublicWebhooksInboundSmsRoute,
