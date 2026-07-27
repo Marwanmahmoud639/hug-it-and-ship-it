@@ -97,7 +97,7 @@ function NumberSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full accent-[#C6F432] h-2 cursor-pointer"
+        className="w-full accent-primary h-2 cursor-pointer"
       />
     </div>
   );

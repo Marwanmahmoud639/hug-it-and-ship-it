@@ -257,7 +257,7 @@ function Problem() {
         <div className="grid sm:grid-cols-2 gap-5">
           {cards.map((c, i) => (
             <Reveal key={c.title} delay={i * 0.05}>
-              <div className="group h-full rounded-2xl border-t-2 border-t-[#C6F432] border border-white/10 r4d-marketing-dark p-7 transition hover:-translate-y-1 hover:border-white/20">
+              <div className="group h-full rounded-2xl border-t-2 border-t-primary border border-white/10 r4d-marketing-dark p-7 transition hover:-translate-y-1 hover:border-white/20">
                 <div className="w-11 h-11 rounded-xl border border-white/10 flex items-center justify-center mb-5 transition group-hover:r4d-bg-lime group-hover:border-primary">
                   <c.icon className="w-5 h-5 text-white transition group-hover:text-primary-foreground" strokeWidth={1.75} />
                 </div>
