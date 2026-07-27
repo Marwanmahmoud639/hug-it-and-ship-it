@@ -42,9 +42,92 @@
   --color-sidebar-accent: var(--sidebar-accent);
 }
 
-/* Light Mode — white bg, black text, lime accent */
+/* ─── Default palette: "navy" ────────────────────────────────────────────────
+   Off-white grey surfaces with dark navy in place of black. Navy carries the
+   primary actions; lime is kept as the accent so the brand highlight survives
+   without driving every button. The previous lime-led look is preserved intact
+   under [data-palette="lime"] further down, selectable in theme settings.
+
+   Colours are oklch so lightness is perceptually even: the L value can be read
+   as actual apparent brightness, which is what keeps text contrast honest
+   across both modes.                                                          */
+
+/* Light — off-white grey bg, dark navy text, navy primary, lime accent */
 :root {
   --radius: 0.75rem;
+  --background: oklch(0.968 0.004 250);   /* off-white grey */
+  --foreground: oklch(0.22 0.04 255);     /* dark navy, never pure black */
+  --card: oklch(0.995 0.002 250);         /* near-white, lifts off the grey */
+  --card-foreground: oklch(0.22 0.04 255);
+  --popover: oklch(0.995 0.002 250);
+  --popover-foreground: oklch(0.22 0.04 255);
+  --primary: oklch(0.38 0.10 255);        /* dark navy */
+  --primary-foreground: oklch(0.98 0.003 250);
+  --secondary: oklch(0.928 0.006 250);
+  --secondary-foreground: oklch(0.24 0.04 255);
+  --muted: oklch(0.928 0.006 250);
+  --muted-foreground: oklch(0.48 0.02 255);
+  --accent: oklch(0.85 0.22 130);         /* lime, retained as the accent */
+  --accent-foreground: oklch(0.22 0.04 255);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.68 0.17 145);
+  --warning: oklch(0.78 0.17 75);
+  --border: oklch(0.885 0.007 250);
+  --input: oklch(0.905 0.007 250);
+  --ring: oklch(0.38 0.10 255);
+  --sidebar: oklch(0.945 0.006 250);
+  --sidebar-foreground: oklch(0.24 0.04 255);
+  --sidebar-border: oklch(0.875 0.007 250);
+  --sidebar-accent: oklch(0.90 0.04 250);
+
+  --shadow-card: 0 1px 3px rgba(23, 32, 58, 0.07), 0 1px 2px rgba(23, 32, 58, 0.05);
+  --shadow-card-hover: 0 4px 20px rgba(23, 32, 58, 0.12), 0 2px 8px rgba(23, 32, 58, 0.07);
+  --shadow-primary-glow: 0 0 16px rgba(46, 66, 114, 0.30);
+  --shadow-sidebar: 4px 0 24px rgba(23, 32, 58, 0.05);
+}
+
+/* Dark — dark navy bg (not black), off-white text, lime accent.
+   Lightness is held at 0.24+ with chroma 0.045+ so the surfaces read as navy
+   rather than near-black: at L 0.17 the blue is present numerically but the
+   eye still sees black, which defeats the point of choosing navy. */
+.dark {
+  --background: oklch(0.24 0.050 255);    /* #0e2036 — blue leads red by 40 */
+  --foreground: oklch(0.968 0.004 250);
+  --card: oklch(0.285 0.048 255);
+  --card-foreground: oklch(0.968 0.004 250);
+  --popover: oklch(0.305 0.048 255);
+  --popover-foreground: oklch(0.968 0.004 250);
+  --primary: oklch(0.72 0.13 250);        /* lifted blue — the 0.38 navy is unreadable on a dark ground */
+  --primary-foreground: oklch(0.18 0.04 255);
+  --secondary: oklch(0.330 0.045 255);
+  --secondary-foreground: oklch(0.968 0.004 250);
+  --muted: oklch(0.330 0.045 255);
+  --muted-foreground: oklch(0.72 0.020 250);
+  --accent: oklch(0.82 0.22 130);         /* lime */
+  --accent-foreground: oklch(0.20 0.05 255);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.72 0.17 145);
+  --warning: oklch(0.78 0.17 75);
+  --border: oklch(0.360 0.040 255);
+  --input: oklch(0.380 0.040 255);
+  --ring: oklch(0.72 0.13 250);
+  --sidebar: oklch(0.205 0.050 255);
+  --sidebar-foreground: oklch(0.968 0.004 250);
+  --sidebar-border: oklch(0.330 0.040 255);
+  --sidebar-accent: oklch(0.350 0.060 250);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 4px 20px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-primary-glow: 0 0 16px rgba(122, 162, 247, 0.35);
+  --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.35);
+}
+
+/* ─── Secondary palette: "lime" ──────────────────────────────────────────────
+   The original white/black/lime scheme, kept verbatim so switching back is a
+   true revert rather than an approximation.                                   */
+[data-palette="lime"] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.15 0 0);
   --card: oklch(1 0 0);
@@ -66,7 +149,7 @@
   --border: oklch(0.90 0 0);
   --input: oklch(0.92 0 0);
   --ring: oklch(0.85 0.22 130);
-  --sidebar: oklch(0.975 0.005 80); /* warm off-white #F8F7F5 */
+  --sidebar: oklch(0.975 0.005 80);
   --sidebar-foreground: oklch(0.18 0 0);
   --sidebar-border: oklch(0.88 0.005 80);
   --sidebar-accent: oklch(0.92 0.06 130);
@@ -77,8 +160,7 @@
   --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.04);
 }
 
-/* Dark Mode — black bg, white text, lime accent */
-.dark {
+[data-palette="lime"].dark {
   --background: oklch(0.08 0 0);
   --foreground: oklch(0.98 0 0);
   --card: oklch(0.11 0 0);
