@@ -384,13 +384,6 @@ function DiscoveryPage() {
                     {status === "pending" && <span className="size-4 rounded-full border border-muted-foreground/30 mt-0.5" />}
                     <div className="flex-1">
                       <div>{STEP_LABELS[name]}</div>
-                      {s?.sub_status && <div className="text-xs text-muted-foreground">{s.sub_status}</div>}
-                      {(s?.sources_success?.length || s?.sources_failed?.length) ? (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {s.sources_success?.map((x: string) => <Badge key={x} variant="outline" className="text-[10px] text-emerald-500">{x} ✓</Badge>)}
-                          {s.sources_failed?.map((x: string) => <Badge key={x} variant="outline" className="text-[10px] text-destructive">{x} ✗</Badge>)}
-                        </div>
-                      ) : null}
                     </div>
                   </li>
                 );
@@ -453,20 +446,7 @@ function DiscoveryPage() {
         {isComplete && results.length === 0 && (
           <div className="p-6 text-center text-muted-foreground border border-border rounded-xl">
             <p className="font-medium mb-1">No results found</p>
-            <p className="text-sm">
-              {search?.sources_failed && Object.keys(search.sources_failed as Record<string, string>).length > 0
-                ? `${Object.keys(search.sources_failed as Record<string, string>).length} sources failed. Check your API keys in Settings → APIs.`
-                : "Try a different keyword or location."}
-            </p>
-            {search?.sources_failed && Object.keys(search.sources_failed as Record<string, string>).length > 0 && (
-              <div className="mt-3 text-xs text-left bg-muted/30 rounded p-3 space-y-1">
-                {Object.entries(search.sources_failed as Record<string, string>).map(([source, error]) => (
-                  <div key={source}>
-                    <span className="text-red-400">✗ {source}:</span> {error}
-                  </div>
-                ))}
-              </div>
-            )}
+            <p className="text-sm">Try a different keyword or location.</p>
           </div>
         )}
 
@@ -502,13 +482,12 @@ function DiscoveryPage() {
                   <th className="p-3">Company</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Phone</th>
-                  <th className="p-3">Sources</th>
                   <th className="p-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {results.length === 0 && (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Waiting for results…</td></tr>
+                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Waiting for results…</td></tr>
                 )}
                 {results.map((r: any) => {
                   const c = r.contact;
@@ -532,11 +511,6 @@ function DiscoveryPage() {
                         {c.email ? <span className={c.email_verified ? "text-emerald-500" : "text-amber-500"}>{c.email} {c.email_verified ? "✓" : "⚠"}</span> : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="p-3 text-xs">{c.phone || <span className="text-muted-foreground">—</span>}</td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(c.verification_sources || []).map((s: string) => <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>)}
-                        </div>
-                      </td>
                       <td className="p-3">{r.auto_added_to_pipeline && <Badge className="text-[10px]">Added ✓</Badge>}</td>
                     </tr>
                   );
@@ -893,12 +867,11 @@ function IndividualsTab() {
                   <th className="p-3">Role</th>
                   <th className="p-3">Company</th>
                   <th className="p-3">Contact</th>
-                  <th className="p-3">Sources</th>
                 </tr>
               </thead>
               <tbody>
                 {results.length === 0 && (
-                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Waiting for results…</td></tr>
+                  <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Waiting for results…</td></tr>
                 )}
                 {results.map((r: any) => {
                   const score = r.confidence_score || 0;
@@ -915,13 +888,6 @@ function IndividualsTab() {
                         {r.email && <div className="text-emerald-500">{r.email}</div>}
                         {r.phone && <div>{r.phone}</div>}
                         {!r.email && !r.phone && <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(r.sources || []).map((s: string) => (
-                            <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
-                          ))}
-                        </div>
                       </td>
                     </tr>
                   );
