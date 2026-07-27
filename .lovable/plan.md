@@ -1,71 +1,51 @@
 ## Goal
-Cover every US city/state in Discovery, run a 10-level decision-maker cascade before giving up, and when the DM truly can't be found, save the business with a B2B badge, route it to a dedicated pipeline stage, charge 0.5 credit, and expose a manual "Retry DM search" button.
+Replace the current project's source with the contents of `R4D-merged.zip` and get it deploying cleanly on Lovable (Cloud backend + published web app).
 
-## Scope (US-only for now)
-- Lock discovery to `country = "US"` (Canada stays deferred).
-- Discovery city/state input: validated 50-state dropdown + free-text city + optional ZIP. Backend expands ZIP → city/state via a lightweight lookup so no city is missed.
+## What's in the upload
+- ~458 files: `src/` (TanStack Start), `supabase/migrations/` (many), `supabase/functions/`, `capacitor.config.ts`, `netlify.toml`, `vite.config.ts`, `package.json`, `bun.lock`, `.github/`, `docs/`, etc.
+- No `.git` directory (safe to copy).
+- Includes its own `src/integrations/supabase/{client,client.server,auth-attacher,auth-middleware,types}.ts` — these are auto-generated per-project on Lovable and must NOT overwrite the current ones (they're bound to *this* project's Supabase ref/keys).
+- Includes its own `supabase/config.toml` — auto-generated per project, must not overwrite.
+- Includes `.env.example` (fine to keep as reference); no real `.env`.
 
-## 10-Level DM cascade (in order)
-Runs per business before falling back to business-only:
-1. Website scrape (`/contact`, `/about`, footer) via Firecrawl — extract owner/founder name + role.
-2. LinkedIn company page → "People" section (via Serper `site:linkedin.com/in`).
-3. Google search: `"<Company>" (owner OR founder OR CEO OR president) site:linkedin.com/in`.
-4. Apollo / Hunter enrichment (if team API key configured).
-5. State Secretary-of-State registry search (`site:sos.<state>.gov <Company>`).
-6. LLC / public records (`site:opencorporates.com` + `bizapedia.com`).
-7. Facebook business page "About" scrape.
-8. Google Maps "owner responses" → author name of owner replies.
-9. Clearbit / PDL enrichment (if team keys present).
-10. Wide Serper / DuckDuckGo fallback with strict identity match (name + company OR city must both appear in snippet).
+## Plan
 
-If any level returns a name that passes strict identity match → stop, save as normal DM lead (1 credit).
-If all 10 fail → save as **business-only fallback**.
+1. **Snapshot current auto-generated files** (do not overwrite them from the zip):
+   - `src/integrations/supabase/client.ts`, `client.server.ts`, `auth-attacher.ts`, `auth-middleware.ts`, `types.ts`
+   - `supabase/config.toml`
+   - `.env` (if any) and `.gitignore` project-local bits
 
-## Business-only fallback (cross-verified)
-Sources tried in parallel:
-- Website `/contact` scrape → `info@`, `sales@`, main phone.
-- Google Business Profile (Maps API) → phone, website, hours.
-- Facebook page → phone, email.
-- Yelp business page → phone.
+2. **Wipe the working tree** except for `.git`, `node_modules`, and the snapshotted auto-gen files, then extract the zip on top with `rsync --exclude='.git' --exclude='src/integrations/supabase/*' --exclude='supabase/config.toml'`.
 
-Marked `verified = true` when the same email or phone appears in 2+ sources.
-Saved with:
-- `business_only = true`
-- Small orange **"B2B"** badge on lead cards + drawer
-- Auto-routed to a new pipeline stage: **"Needs DM Research"** (created for every team, seeded ahead of the "New Lead" stage)
-- Charged **0.5 credit** instead of 1
-- `dm_search_attempts = 1`, `dm_last_retry_at = now()`
+3. **Restore the snapshotted auto-gen files** so the app stays bound to this project's Lovable Cloud instance.
 
-## Manual retry
-- "Retry DM search" button on the Lead drawer and Contact detail for any `business_only = true` lead.
-- Re-runs the same 10-level cascade; on success: clears `business_only`, moves lead out of "Needs DM Research" into "New Lead", charges the remaining 0.5 credit, updates `dm_search_attempts++`.
+4. **Reconcile migrations**:
+   - The zip's `supabase/migrations/` contains many timestamped files. Any already applied to this DB (same filename) are ignored by Supabase's migration runner. New ones will apply.
+   - Risk: the zip may include migrations whose objects already exist (from earlier work in this project) and will fail. I'll dry-list new migrations first, then apply them one at a time via the migration tool, wrapping conflicting `CREATE` statements with `IF NOT EXISTS` / `DROP ... IF EXISTS` guards only when needed.
+   - Any `ALTER`/data seeding that would break existing rows will be flagged and skipped, with a short note.
 
-## Credits (half-credit support)
-- Migrate `teams.credits_used` from `integer` → `numeric(12,2)`.
-- Update `consume_credits(_team_id, _amount numeric, _kind)` signature and `tg_charge_contact_credit` trigger:
-  - `business_only` insert → `_amount = 0.5`
-  - Regular DM insert → `_amount = 1`
-- Credits badge UI rounds display to whole numbers but preserves halves in tooltip.
+5. **Install deps and typecheck**: `bun install`, then run `tsgo` on the fresh tree. Fix any imports that reference the old (removed) files.
 
-## Database changes (one migration)
-- `contacts`: add `business_only boolean default false`, `dm_search_attempts int default 0`, `dm_last_retry_at timestamptz`, `business_verified_sources text[] default '{}'`.
-- `teams.credits_used` → `numeric(12,2)`.
-- Backfill: insert **"Needs DM Research"** stage at position -1 for every existing team.
-- Update `create_sub_account()` and `handle_new_user()` to seed the new stage.
-- Update `consume_credits` + `tg_charge_contact_credit` for numeric amounts and `business_only` awareness.
+6. **Verify locally**:
+   - Wait for dev server to answer on `:8080`.
+   - Open `/` and `/dashboard` in Playwright, screenshot, check console + network for errors.
 
-## Files touched
-- `supabase/functions/discovery-run/index.ts` — 10-level cascade, US-only guard, business-only fallback path.
-- `supabase/functions/discovery-run/scrapers/` — add `dm-cascade.ts` (10 levels), `business-fallback.ts` (cross-verify sources), `us-locations.ts` (state list + ZIP resolver).
-- `src/lib/discovery.functions.ts` — pass `strictIdentityMatch: true` always, expose new `retryDMSearch(contactId)` server fn.
-- `src/routes/_app.discovery.tsx` — 50-state dropdown, free-text city + optional ZIP, US-only (drop CA toggle for now).
-- `src/components/areas/LeadPinCard.tsx` + `src/components/contacts/lead-drawer.tsx` — B2B badge, Retry button, "verified 2+ sources" indicator.
-- `src/lib/lead-tools.functions.ts` — `retryDMSearch` handler that re-runs cascade + adjusts credits + moves pipeline stage.
-- `src/components/app-shell/discovery-credits-badge.tsx` — render fractional totals cleanly.
+7. **Publish** to `hug-it-and-ship-it.lovable.app` (existing slug) once the build is clean.
 
-## Not in scope
-- Canada support (deferred).
-- Automatic weekly retry cron (user chose manual only).
-- Changes to skip-tracing, email warmup, or AI caller.
+## Things I will explicitly NOT touch
+- `.git/`
+- `src/integrations/supabase/*` (auto-generated for this project's Cloud instance)
+- `supabase/config.toml` (project-level)
+- Project secrets (already set: GOOGLE_API_KEY, HUNTER_API_KEY, LOVABLE_API_KEY, etc.)
+- Storage buckets and existing DB data
 
-Confirm and I'll ship the migration + code in one build.
+## Risks / things to know
+- **Migrations may fail** if the zip's schema diverges from what's already in the DB. If a migration fails I'll patch it in-place (add `IF NOT EXISTS`, etc.) rather than dropping data. If a migration is fundamentally incompatible, I'll stop and ask before dropping anything.
+- **Edge functions in the zip** will be deployed as-is; existing ones with the same name get overwritten. If any require new secrets, I'll list them and ask you to add them.
+- **Netlify / Capacitor / Android workflow files** come along for the ride but Lovable itself deploys via its own pipeline — they're just there for future use.
+- If `package.json` differs substantially, `bun install` may pull new deps; that's expected.
+
+## Deliverable
+A working preview at the current preview URL and a re-published site at `https://hug-it-and-ship-it.lovable.app`.
+
+**Confirm to proceed** — this is a destructive replace of the current `src/`, `supabase/functions/`, `supabase/migrations/`, `package.json`, config files, etc.
