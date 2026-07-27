@@ -15,7 +15,7 @@ export function WeekTimeline() {
   const reduce = useReducedMotion();
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0A0A0A] p-6 md:p-10">
+    <div className="rounded-3xl border border-white/10 r4d-marketing-dark p-6 md:p-10">
       {/* Desktop: horizontal */}
       <div className="hidden md:block">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-widest text-zinc-500 mb-4 pl-24">
@@ -27,7 +27,7 @@ export function WeekTimeline() {
           {LANES.map((lane, i) => (
             <div key={lane.label} className="flex items-center gap-4">
               <div className="w-20 flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 rounded-lg border border-white/10 bg-black flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg border border-white/10 r4d-marketing-dark flex items-center justify-center">
                   <lane.icon className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-xs font-bold text-zinc-400">{lane.label}</span>

@@ -125,7 +125,7 @@ function Hero() {
   return (
     <section
       ref={ref}
-      className="relative pt-32 md:pt-40 pb-20 md:pb-28 px-6 bg-black overflow-hidden"
+      className="relative pt-32 md:pt-40 pb-20 md:pb-28 px-6 r4d-marketing-dark overflow-hidden"
     >
       <div
         className="pointer-events-none absolute inset-0 hidden md:block"
@@ -160,7 +160,7 @@ function Hero() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
               <a
                 href="#pricing"
-                className="group inline-flex items-center justify-center gap-2 r4d-bg-lime hover:opacity-90 text-black font-bold px-7 py-4 rounded-xl r4d-glow-lime text-base transition"
+                className="group inline-flex items-center justify-center gap-2 r4d-bg-lime hover:opacity-90 text-primary-foreground font-bold px-7 py-4 rounded-xl r4d-glow-lime text-base transition"
               >
                 See pricing & get access
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
@@ -198,7 +198,7 @@ function Hero() {
 
 function TrustBar() {
   return (
-    <section className="py-10 border-y border-white/5 bg-[#0A0A0A]">
+    <section className="py-10 border-y border-white/5 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto px-6">
         <p className="text-center font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-6">
           Booking 30+ meetings/mo for lead-gen, SaaS, SMMA, recruiting &amp; B2B agencies
@@ -240,7 +240,7 @@ function Problem() {
   ];
 
   return (
-    <section className="py-24 md:py-28 px-6 bg-black">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="text-center mb-14 max-w-3xl mx-auto">
@@ -257,9 +257,9 @@ function Problem() {
         <div className="grid sm:grid-cols-2 gap-5">
           {cards.map((c, i) => (
             <Reveal key={c.title} delay={i * 0.05}>
-              <div className="group h-full rounded-2xl border-t-2 border-t-[#C6F432] border border-white/10 bg-[#0A0A0A] p-7 transition hover:-translate-y-1 hover:border-white/20">
-                <div className="w-11 h-11 rounded-xl border border-white/10 flex items-center justify-center mb-5 transition group-hover:r4d-bg-lime group-hover:border-[#C6F432]">
-                  <c.icon className="w-5 h-5 text-white transition group-hover:text-black" strokeWidth={1.75} />
+              <div className="group h-full rounded-2xl border-t-2 border-t-[#C6F432] border border-white/10 r4d-marketing-dark p-7 transition hover:-translate-y-1 hover:border-white/20">
+                <div className="w-11 h-11 rounded-xl border border-white/10 flex items-center justify-center mb-5 transition group-hover:r4d-bg-lime group-hover:border-primary">
+                  <c.icon className="w-5 h-5 text-white transition group-hover:text-primary-foreground" strokeWidth={1.75} />
                 </div>
                 <h3 className="font-bold text-xl text-white mb-1">{c.title}</h3>
                 <div className="text-sm font-bold r4d-lime mb-3">{c.hi}</div>
@@ -277,7 +277,7 @@ function Problem() {
 
 function MathSection() {
   return (
-    <section className="py-24 md:py-28 px-6 bg-[#0A0A0A]">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-5xl mx-auto">
         <Reveal>
           <div className="text-center mb-12 max-w-3xl mx-auto">
@@ -310,7 +310,7 @@ function Sequence() {
   ];
 
   return (
-    <section id="sequence" className="py-24 md:py-28 px-6 bg-black">
+    <section id="sequence" className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="text-center mb-14 max-w-3xl mx-auto">
@@ -327,10 +327,10 @@ function Sequence() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-16">
           {steps.map((s, i) => (
             <Reveal key={s.label} delay={i * 0.04}>
-              <div className="h-full rounded-2xl border border-white/10 bg-[#0A0A0A] p-6 hover:border-[#C6F432]/40 transition">
+              <div className="h-full rounded-2xl border border-white/10 r4d-marketing-dark p-6 hover:border-primary/40 transition">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-lg r4d-bg-lime flex items-center justify-center">
-                    <s.icon className="w-5 h-5 text-black" />
+                    <s.icon className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <span className="font-mono text-xs text-zinc-600">0{i + 1}</span>
                 </div>
@@ -405,7 +405,7 @@ function Engine() {
   ];
 
   return (
-    <section id="engine" className="py-24 md:py-28 px-6 bg-[#0A0A0A]">
+    <section id="engine" className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="text-center mb-14 max-w-3xl mx-auto">
@@ -418,7 +418,7 @@ function Engine() {
         <div className="grid md:grid-cols-3 gap-5">
           {pillars.map((p, i) => (
             <Reveal key={p.title} delay={i * 0.07}>
-              <div className="h-full rounded-2xl border border-white/10 bg-black flex flex-col">
+              <div className="h-full rounded-2xl border border-white/10 r4d-marketing-dark flex flex-col">
                 <div className="aspect-[5/3] border-b border-white/10 overflow-hidden relative">{p.micro}</div>
                 <div className="p-7 flex-1 flex flex-col">
                   <div className="font-mono text-[11px] uppercase tracking-[0.18em] r4d-lime mb-3 flex items-center gap-2">
@@ -505,7 +505,7 @@ function TilesStackMicro() {
 
 function VsStack() {
   return (
-    <section className="py-24 md:py-28 px-6 bg-black">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-5xl mx-auto">
         <Reveal>
           <div className="text-center mb-12 max-w-3xl mx-auto">
@@ -550,7 +550,7 @@ function Results() {
   ];
 
   return (
-    <section className="py-24 md:py-28 px-6 bg-[#0A0A0A]">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="text-center mb-14 max-w-3xl mx-auto">
@@ -563,7 +563,7 @@ function Results() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
           {stats.map((s, i) => (
             <Reveal key={s.label} delay={i * 0.05}>
-              <div className="rounded-2xl border border-white/10 bg-black p-6 text-center h-full">
+              <div className="rounded-2xl border border-white/10 r4d-marketing-dark p-6 text-center h-full">
                 <div className="font-black text-3xl md:text-4xl r4d-lime tracking-tight">
                   <Counter to={s.value} decimals={s.decimals ?? 0} prefix={s.prefix ?? ""} suffix={s.suffix ?? ""} />
                 </div>
@@ -576,7 +576,7 @@ function Results() {
           {cases.map((c, i) => (
             <Reveal key={c.who} delay={i * 0.07}>
               {/* TODO: replace with real testimonial before going live */}
-              <div className="h-full rounded-2xl border border-white/10 bg-black p-7 flex flex-col">
+              <div className="h-full rounded-2xl border border-white/10 r4d-marketing-dark p-7 flex flex-col">
                 <Quote className="w-6 h-6 r4d-lime mb-4" />
                 <p className="text-zinc-200 leading-relaxed flex-1">{c.quote}</p>
                 <div className="flex items-center gap-3 mt-6 pt-5 border-t border-white/5">
@@ -610,7 +610,7 @@ function WhoFor() {
   ];
 
   return (
-    <section className="py-24 md:py-28 px-6 bg-black">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-5xl mx-auto">
         <Reveal>
           <div className="text-center mb-14 max-w-3xl mx-auto">
@@ -622,7 +622,7 @@ function WhoFor() {
         </Reveal>
         <div className="grid md:grid-cols-2 gap-5">
           <Reveal>
-            <div className="rounded-2xl border border-[#C6F432]/30 bg-[#C6F432]/[0.04] p-7 h-full">
+            <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-7 h-full">
               <h3 className="font-bold text-white text-lg mb-5">This is for you if</h3>
               <ul className="space-y-3">
                 {fors.map((f) => (
@@ -635,7 +635,7 @@ function WhoFor() {
             </div>
           </Reveal>
           <Reveal delay={0.05}>
-            <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-7 h-full">
+            <div className="rounded-2xl border border-white/10 r4d-marketing-dark p-7 h-full">
               <h3 className="font-bold text-white text-lg mb-5">This is NOT for you if</h3>
               <ul className="space-y-3 mb-6">
                 {notFors.map((f) => (
@@ -660,7 +660,7 @@ function WhoFor() {
 
 function Founder() {
   return (
-    <section className="py-24 md:py-28 px-6 bg-[#0A0A0A]">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-3xl mx-auto">
         <Reveal>
           <div className="text-center mb-10">
@@ -672,13 +672,13 @@ function Founder() {
         </Reveal>
         <Reveal>
           {/* Founder voice — anonymized */}
-          <div className="relative rounded-2xl border border-white/10 bg-black p-8 md:p-10">
+          <div className="relative rounded-2xl border border-white/10 r4d-marketing-dark p-8 md:p-10">
             <div className="absolute top-4 bottom-4 left-0 w-1 r4d-bg-lime rounded-r" />
             <p className="text-zinc-200 leading-relaxed text-lg pl-4">
               "I ran a cold-calling agency for years. I watched great offers die because the lead was burned, the gatekeeper won, or the follow-up lived in one VA's head. The tools weren't the edge anymore — everyone had the same list. So we built the thing we wished existed: one engine that finds the actual buyer and surrounds them on every channel until they answer. This is that engine."
             </p>
             <div className="pl-4 mt-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full r4d-bg-lime flex items-center justify-center text-black font-black">M</div>
+              <div className="w-10 h-10 rounded-full r4d-bg-lime flex items-center justify-center text-primary-foreground font-black">M</div>
               <div>
                 <div className="text-white font-bold">— The founder</div>
                 <div className="text-xs text-zinc-500">Founder</div>
@@ -762,7 +762,7 @@ function Pricing() {
 
 
   return (
-    <section id="pricing" className="py-24 md:py-28 px-6 bg-black">
+    <section id="pricing" className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="text-center mb-10 max-w-3xl mx-auto">
@@ -780,16 +780,16 @@ function Pricing() {
           <div className="flex items-center justify-center gap-3 mb-10">
             <button
               onClick={() => setAnnual(false)}
-              className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${!annual ? "r4d-bg-lime text-black" : "text-zinc-400 hover:text-white"}`}
+              className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${!annual ? "r4d-bg-lime text-primary-foreground" : "text-zinc-400 hover:text-white"}`}
             >
               Monthly
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`text-sm font-semibold px-4 py-2 rounded-lg transition inline-flex items-center gap-2 ${annual ? "r4d-bg-lime text-black" : "text-zinc-400 hover:text-white"}`}
+              className={`text-sm font-semibold px-4 py-2 rounded-lg transition inline-flex items-center gap-2 ${annual ? "r4d-bg-lime text-primary-foreground" : "text-zinc-400 hover:text-white"}`}
             >
               Annual
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${annual ? "bg-black text-[#C6F432]" : "bg-[#C6F432]/15 r4d-lime"}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${annual ? "r4d-marketing-dark text-primary" : "bg-primary/15 r4d-lime"}`}>
                 Save 2 months
               </span>
             </button>
@@ -804,12 +804,12 @@ function Pricing() {
                 <div
                   className={`relative h-full rounded-3xl p-8 transition flex flex-col ${
                     p.featured
-                      ? "border-2 border-[#C6F432] bg-[#0A0A0A] r4d-glow-lime md:scale-[1.02]"
-                      : "border border-white/10 bg-[#0A0A0A] hover:border-white/20"
+                      ? "border-2 border-primary r4d-marketing-dark r4d-glow-lime md:scale-[1.02]"
+                      : "border border-white/10 r4d-marketing-dark hover:border-white/20"
                   }`}
                 >
                   {p.featured && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 r4d-bg-lime text-black text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 r4d-bg-lime text-primary-foreground text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full">
                       Most popular
                     </div>
                   )}
@@ -839,7 +839,7 @@ function Pricing() {
                       rel="noopener noreferrer"
                       className={`mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition min-w-0 whitespace-nowrap text-sm sm:text-base ${
                         p.featured
-                          ? "r4d-bg-lime hover:opacity-90 text-black"
+                          ? "r4d-bg-lime hover:opacity-90 text-primary-foreground"
                           : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
                       }`}
                     >
@@ -848,7 +848,7 @@ function Pricing() {
                   ) : (
                     <Link
                       to="/enterprise"
-                      className="mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition min-w-0 whitespace-nowrap text-sm sm:text-base bg-white text-black hover:bg-white/90"
+                      className="mt-6 flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition min-w-0 whitespace-nowrap text-sm sm:text-base bg-white text-primary-foreground hover:bg-white/90"
                     >
                       <span className="truncate">{p.ctaLabel}</span> <ArrowRight className="w-4 h-4 shrink-0" />
                     </Link>
@@ -881,15 +881,15 @@ function Pricing() {
 
 function RiskReversal() {
   return (
-    <section className="py-20 md:py-24 px-6 bg-[#0A0A0A]">
+    <section className="py-20 md:py-24 px-6 r4d-marketing-dark">
       <div className="max-w-5xl mx-auto">
         <Reveal>
           {/* Guarantee terms — confirm before publishing */}
-          <div className="rounded-3xl border-2 border-[#C6F432] bg-black p-8 md:p-12 r4d-glow-lime">
+          <div className="rounded-3xl border-2 border-primary r4d-marketing-dark p-8 md:p-12 r4d-glow-lime">
             <div className="flex flex-col md:flex-row items-start gap-6">
               <div className="w-14 h-14 rounded-2xl r4d-bg-lime flex items-center justify-center shrink-0 relative">
-                <Shield className="w-7 h-7 text-black" strokeWidth={2.25} />
-                <Clock className="w-3.5 h-3.5 text-black absolute -bottom-1 -right-1 bg-[#C6F432] rounded-full p-0.5" strokeWidth={2.5} />
+                <Shield className="w-7 h-7 text-primary-foreground" strokeWidth={2.25} />
+                <Clock className="w-3.5 h-3.5 text-primary-foreground absolute -bottom-1 -right-1 bg-primary rounded-full p-0.5" strokeWidth={2.5} />
               </div>
               <div className="flex-1">
                 <h2 className="font-black text-2xl md:text-4xl text-white tracking-tight leading-tight mb-4">
@@ -911,7 +911,7 @@ function RiskReversal() {
 
 function HowAccess() {
   return (
-    <section className="py-24 md:py-28 px-6 bg-black">
+    <section className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="text-center mb-16 max-w-3xl mx-auto">
@@ -949,7 +949,7 @@ function FAQ() {
   ];
 
   return (
-    <section id="faq" className="py-24 md:py-28 px-6 bg-[#0A0A0A]">
+    <section id="faq" className="py-24 md:py-28 px-6 r4d-marketing-dark">
       <div className="max-w-3xl mx-auto">
         <Reveal>
           <div className="text-center mb-14">
@@ -974,7 +974,7 @@ function FAQ() {
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-white/10 bg-black overflow-hidden">
+    <div className="rounded-xl border border-white/10 r4d-marketing-dark overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full px-6 py-5 flex items-center justify-between text-left gap-4"
@@ -994,7 +994,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 function FinalCTA() {
   return (
-    <section className="relative py-28 md:py-36 px-6 bg-black overflow-hidden">
+    <section className="relative py-28 md:py-36 px-6 r4d-marketing-dark overflow-hidden">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-30"
@@ -1017,7 +1017,7 @@ function FinalCTA() {
         <Reveal delay={0.1}>
           <a
             href="#pricing"
-            className="group mt-10 inline-flex items-center gap-2 r4d-bg-lime hover:opacity-90 text-black font-bold px-8 py-5 rounded-2xl r4d-glow-lime text-lg transition"
+            className="group mt-10 inline-flex items-center gap-2 r4d-bg-lime hover:opacity-90 text-primary-foreground font-bold px-8 py-5 rounded-2xl r4d-glow-lime text-lg transition"
           >
             Get Access Now
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
@@ -1037,13 +1037,13 @@ function FinalCTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 py-12 px-6 bg-black">
+    <footer className="border-t border-white/5 py-12 px-6 r4d-marketing-dark">
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-3 gap-8 items-start mb-10">
           <div>
             <Link to="/" className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-lg r4d-bg-lime flex items-center justify-center">
-                <Target className="w-4 h-4 text-black" strokeWidth={2.5} />
+                <Target className="w-4 h-4 text-primary-foreground" strokeWidth={2.5} />
               </div>
               <span className="font-black text-lg text-white">the engine</span>
             </Link>
@@ -1081,9 +1081,9 @@ function VideoModalRoot() {
   }, []);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 z-[70] r4d-marketing-dark/90 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setOpen(false)}>
       <div
-        className="relative w-full max-w-3xl aspect-video rounded-2xl border border-white/10 bg-[#0A0A0A] flex items-center justify-center"
+        className="relative w-full max-w-3xl aspect-video rounded-2xl border border-white/10 r4d-marketing-dark flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* TODO: replace with real 90-sec breakdown video before going live */}
