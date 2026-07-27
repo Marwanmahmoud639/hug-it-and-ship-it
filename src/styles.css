@@ -243,7 +243,16 @@
 
 /* R4D marketing surface — primary theme */
 @layer utilities {
-  .r4d-obsidian { background-color: var(--background); color: var(--foreground); }
+  .r4d-obsidian, .r4d-marketing-dark {
+    --background: oklch(0.18 0.04 255);
+    --foreground: oklch(0.98 0.003 250);
+    --card: oklch(0.22 0.04 255);
+    --border: oklch(0.98 0.003 250 / 0.10);
+    --primary: oklch(0.72 0.13 250);
+    --primary-foreground: oklch(0.18 0.04 255);
+    background-color: oklch(0.18 0.04 255);
+    color: oklch(0.98 0.003 250);
+  }
   .r4d-surface { background-color: var(--card); }
   .r4d-surface-2 { background-color: var(--muted); }
   .r4d-lime { color: var(--primary); }
