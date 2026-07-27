@@ -218,7 +218,7 @@ export const runPeopleLookup = createServerFn({ method: "POST" })
       fetched_at: new Date().toISOString(),
     };
 
-    await supabase.from("ai_lookup_cache").insert({
+    await supabaseAdmin.from("ai_lookup_cache").insert({
       query_hash: cacheKey,
       query: data as any,
       result: result as any,
