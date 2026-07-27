@@ -1007,6 +1007,32 @@ async function checkMx(domain: string): Promise<boolean> {
   }
 }
 
+// ─── Mailbox-level verification via MillionVerifier ──────────────────────────
+// checkMx() above only proves the DOMAIN accepts mail, which is why
+// pattern-generated addresses still bounce. This checks the actual mailbox.
+// Returns null when we can't get a definitive answer (no key, timeout, unknown),
+// so callers can fall back to MX-only behaviour instead of dropping good leads.
+type MvResult = { deliverable: boolean; result: string };
+async function verifyEmailMillionVerifier(
+  email: string,
+  apiKey: string,
+): Promise<MvResult | null> {
+  try {
+    const url = `https://api.millionverifier.com/api/v3/?api=${encodeURIComponent(apiKey)}&email=${encodeURIComponent(email)}&timeout=10`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const result = String(j.result || "").toLowerCase();
+    // "ok" = deliverable. "catch_all" and "unknown" are indeterminate, not proof
+    // of failure, so we treat them as inconclusive rather than dropping them.
+    if (result === "ok") return { deliverable: true, result };
+    if (result === "invalid" || result === "disposable") return { deliverable: false, result };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function generatePatterns(firstName: string, lastName: string, domain: string): string[] {
   const f = firstName.toLowerCase();
   const l = lastName.toLowerCase();
@@ -1681,6 +1707,10 @@ async function runPipeline(searchId: string) {
     let verifiedEmails = 0;
     let patternVerified = 0;
     let verifiedPhones = 0;
+    const mvKey = (settings?.millionverifier_api_key as string | undefined)
+      || Deno.env.get("MILLIONVERIFIER_API_KEY") || null;
+    let mvChecked = 0;
+    let mvDropped = 0;
 
     for (const b of merged) {
       const domain = b.domain || (b.website ? (() => { try { return new URL(b.website!.startsWith("http") ? b.website! : `https://${b.website}`).hostname.replace(/^www\./, ""); } catch { return null; } })() : null);
@@ -1708,8 +1738,29 @@ async function runPipeline(searchId: string) {
           const mxOk = await checkMx(domain);
           if (mxOk) {
             const patterns = generatePatterns(first, last, domain);
-            b.emails_found = patterns.map(p => ({ email: p, source: "pattern" }));
-            patternVerified += patterns.length;
+            // Pattern addresses are guesses — MX only proves the domain takes
+            // mail, not that these mailboxes exist. When a MillionVerifier key
+            // is configured, check them for real and keep only what's
+            // deliverable, so guessed addresses don't reach a sending campaign.
+            if (mvKey) {
+              const kept: typeof b.emails_found = [];
+              for (const p of patterns) {
+                if (!budget.canSpend("millionverifier_verify")) break;
+                const mv = await verifyEmailMillionVerifier(p, mvKey);
+                await budget.record("millionverifier", "millionverifier_verify", 1, mv !== null);
+                mvChecked++;
+                if (mv?.deliverable) {
+                  kept.push({ email: p, source: "pattern_verified" });
+                  break; // one confirmed mailbox is enough
+                }
+                if (mv && !mv.deliverable) mvDropped++;
+              }
+              b.emails_found = kept;
+              patternVerified += kept.length;
+            } else {
+              b.emails_found = patterns.map(p => ({ email: p, source: "pattern" }));
+              patternVerified += patterns.length;
+            }
           }
         }
       }
@@ -1724,8 +1775,10 @@ async function runPipeline(searchId: string) {
       pattern_verified_emails: patternVerified,
       verified_phones: verifiedPhones,
     }).eq("id", searchId);
-    await setStepDone(searchId, teamId, "verify", { verifiedEmails, patternVerified, verifiedPhones }, ["smtp"], []);
-    await logActivity(searchId, teamId, "verify", "success", "✅", `Verified ${verifiedEmails} emails, ${verifiedPhones} phones`, { percent: 85 });
+    await setStepDone(searchId, teamId, "verify", { verifiedEmails, patternVerified, verifiedPhones, mvChecked, mvDropped }, ["smtp"], []);
+    await logActivity(searchId, teamId, "verify", "success", "✅",
+      `Verified ${verifiedEmails} emails, ${verifiedPhones} phones${mvChecked > 0 ? ` (${mvChecked} mailbox-checked, ${mvDropped} undeliverable removed)` : ""}`,
+      { percent: 85 });
 
     // ── STEP 6: score + auto-pipeline + persist ──────────────────────────
     if (await checkCancelled()) return;
