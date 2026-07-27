@@ -18,7 +18,12 @@ import { scrapeOpenStreetMap } from "./scrapers/osm-global.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_KEY") ?? Deno.env.get("GOOGLE_MAPS_SERVER_KEY") ?? "AIzaSyDcJPuyi_jAkpGYzPCXhBcpCtaHuKmriAI";
+// No literal fallback: a key hardcoded here is a key published to anyone who
+// can read the repo, and billable Google usage runs against it. Set
+// GOOGLE_MAPS_KEY (or GOOGLE_MAPS_SERVER_KEY) as a Supabase secret. Empty means
+// the Google Maps source is skipped and reported as unconfigured, which is a
+// far better failure than leaking a credential.
+const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_KEY") ?? Deno.env.get("GOOGLE_MAPS_SERVER_KEY") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1344,8 +1349,11 @@ async function runPipeline(searchId: string) {
          return { name, items: [] as Business[] };
        });
 
-    // Always-on free sources
-    tasks.push(wrap("google_maps", queryGoogleMaps(keyword, location, settings?.google_maps_key || GOOGLE_MAPS_KEY)));
+    // Always-on free sources. OpenStreetMap needs no key and still runs when
+    // Google Maps is unconfigured, so discovery degrades rather than dying.
+    const mapsKey = (settings?.google_maps_key as string | undefined) || GOOGLE_MAPS_KEY;
+    if (mapsKey) tasks.push(wrap("google_maps", queryGoogleMaps(keyword, location, mapsKey)));
+    else sources_failed["google_maps"] = "no api key configured";
 
     // OpenStreetMap (Overpass) — free, keyless. Returns exact address + coords.
     tasks.push(wrap("openstreetmap", scrapeOpenStreetMap(keyword, location, countryHint)));
