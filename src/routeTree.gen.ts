@@ -36,6 +36,8 @@ import { Route as AppProposalsRouteImport } from './routes/_app.proposals'
 import { Route as AppPortalsRouteImport } from './routes/_app.portals'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppMonitorsRouteImport } from './routes/_app.monitors'
+import { Route as AppKnowledgeBaseRouteImport } from './routes/_app.knowledge-base'
+import { Route as AppIntelligenceRouteImport } from './routes/_app.intelligence'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppDiscoveryRouteImport } from './routes/_app.discovery'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -201,6 +203,16 @@ const AppPipelineRoute = AppPipelineRouteImport.update({
 const AppMonitorsRoute = AppMonitorsRouteImport.update({
   id: '/monitors',
   path: '/monitors',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKnowledgeBaseRoute = AppKnowledgeBaseRouteImport.update({
+  id: '/knowledge-base',
+  path: '/knowledge-base',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntelligenceRoute = AppIntelligenceRouteImport.update({
+  id: '/intelligence',
+  path: '/intelligence',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInboxRoute = AppInboxRouteImport.update({
@@ -402,6 +414,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/discovery': typeof AppDiscoveryRoute
   '/inbox': typeof AppInboxRoute
+  '/intelligence': typeof AppIntelligenceRoute
+  '/knowledge-base': typeof AppKnowledgeBaseRoute
   '/monitors': typeof AppMonitorsRoute
   '/pipeline': typeof AppPipelineRoute
   '/portals': typeof AppPortalsRoute
@@ -462,6 +476,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/discovery': typeof AppDiscoveryRoute
   '/inbox': typeof AppInboxRoute
+  '/intelligence': typeof AppIntelligenceRoute
+  '/knowledge-base': typeof AppKnowledgeBaseRoute
   '/monitors': typeof AppMonitorsRoute
   '/pipeline': typeof AppPipelineRoute
   '/portals': typeof AppPortalsRoute
@@ -525,6 +541,8 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/discovery': typeof AppDiscoveryRoute
   '/_app/inbox': typeof AppInboxRoute
+  '/_app/intelligence': typeof AppIntelligenceRoute
+  '/_app/knowledge-base': typeof AppKnowledgeBaseRoute
   '/_app/monitors': typeof AppMonitorsRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/portals': typeof AppPortalsRoute
@@ -587,6 +605,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/discovery'
     | '/inbox'
+    | '/intelligence'
+    | '/knowledge-base'
     | '/monitors'
     | '/pipeline'
     | '/portals'
@@ -647,6 +667,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/discovery'
     | '/inbox'
+    | '/intelligence'
+    | '/knowledge-base'
     | '/monitors'
     | '/pipeline'
     | '/portals'
@@ -709,6 +731,8 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/discovery'
     | '/_app/inbox'
+    | '/_app/intelligence'
+    | '/_app/knowledge-base'
     | '/_app/monitors'
     | '/_app/pipeline'
     | '/_app/portals'
@@ -976,6 +1000,20 @@ declare module '@tanstack/react-router' {
       path: '/monitors'
       fullPath: '/monitors'
       preLoaderRoute: typeof AppMonitorsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/knowledge-base': {
+      id: '/_app/knowledge-base'
+      path: '/knowledge-base'
+      fullPath: '/knowledge-base'
+      preLoaderRoute: typeof AppKnowledgeBaseRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/intelligence': {
+      id: '/_app/intelligence'
+      path: '/intelligence'
+      fullPath: '/intelligence'
+      preLoaderRoute: typeof AppIntelligenceRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/inbox': {
@@ -1261,6 +1299,8 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiscoveryRoute: typeof AppDiscoveryRoute
   AppInboxRoute: typeof AppInboxRoute
+  AppIntelligenceRoute: typeof AppIntelligenceRoute
+  AppKnowledgeBaseRoute: typeof AppKnowledgeBaseRoute
   AppMonitorsRoute: typeof AppMonitorsRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppPortalsRoute: typeof AppPortalsRoute
@@ -1284,6 +1324,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDiscoveryRoute: AppDiscoveryRoute,
   AppInboxRoute: AppInboxRoute,
+  AppIntelligenceRoute: AppIntelligenceRoute,
+  AppKnowledgeBaseRoute: AppKnowledgeBaseRoute,
   AppMonitorsRoute: AppMonitorsRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppPortalsRoute: AppPortalsRoute,
