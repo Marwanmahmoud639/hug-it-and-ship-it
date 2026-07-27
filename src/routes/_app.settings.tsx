@@ -22,6 +22,7 @@ import { SubdomainRequestPanel } from "@/components/settings/subdomain-request-p
 import { AccountProfile } from "@/components/settings/account-profile";
 import { AutomationApisPanel } from "@/components/settings/automation-apis-panel";
 import { ApiKeysPanel } from "@/components/settings/api-keys-panel";
+import { SocialConnectionsPanel } from "@/components/settings/social-connections-panel";
 import { DialerProvidersPanel } from "@/components/settings/dialer-providers-panel";
 
 import { ApiCreditsPanel } from "@/components/settings/api-credits-panel";
@@ -290,8 +291,15 @@ function Settings() {
           </Card>
         </TabsContent>}
 
-        {canManageApiKeys && <TabsContent value="social" className="mt-4">
+        {canManageApiKeys && <TabsContent value="social" className="mt-4 space-y-4">
+          <SocialConnectionsPanel />
           <Card className="p-6 bg-card space-y-5">
+            <div className="text-xs text-amber-500/90 bg-amber-500/10 rounded-lg p-3">
+              <strong>Legacy — not recommended.</strong> Pasting a session cookie makes requests
+              look like an automated login replay, which is against LinkedIn's User Agreement and is
+              a common cause of permanent account restrictions. Prefer the OAuth connection above,
+              which LinkedIn sanctions for posting on your behalf.
+            </div>
             <div>
               <h3 className="font-semibold text-sm mb-3">LinkedIn</h3>
               <div className="space-y-3">

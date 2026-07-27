@@ -54,6 +54,7 @@ import { Route as AppReviewIdRouteImport } from './routes/_app.review.$id'
 import { Route as AppContactsIdRouteImport } from './routes/_app.contacts.$id'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiSocialCallbackPlatformRouteImport } from './routes/api/social.callback.$platform'
 import { Route as ApiPublicWebhooksWhopRouteImport } from './routes/api/public/webhooks/whop'
 import { Route as ApiPublicWebhooksInboundSmsRouteImport } from './routes/api/public/webhooks/inbound-sms'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
@@ -292,6 +293,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSocialCallbackPlatformRoute =
+  ApiSocialCallbackPlatformRouteImport.update({
+    id: '/api/social/callback/$platform',
+    path: '/api/social/callback/$platform',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksWhopRoute = ApiPublicWebhooksWhopRouteImport.update({
   id: '/api/public/webhooks/whop',
   path: '/api/public/webhooks/whop',
@@ -429,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
   '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/api/social/callback/$platform': typeof ApiSocialCallbackPlatformRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
@@ -488,6 +496,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
   '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/api/social/callback/$platform': typeof ApiSocialCallbackPlatformRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
@@ -550,6 +559,7 @@ export interface FileRoutesById {
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
   '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/api/social/callback/$platform': typeof ApiSocialCallbackPlatformRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
     | '/api/public/webhooks/whop'
+    | '/api/social/callback/$platform'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/api/public/dialer/sms-inbound/$provider'
@@ -670,6 +681,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
     | '/api/public/webhooks/whop'
+    | '/api/social/callback/$platform'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/api/public/dialer/sms-inbound/$provider'
@@ -731,6 +743,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
     | '/api/public/webhooks/whop'
+    | '/api/social/callback/$platform'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/api/public/dialer/sms-inbound/$provider'
@@ -768,6 +781,7 @@ export interface RootRouteChildren {
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicWebhooksInboundSmsRoute: typeof ApiPublicWebhooksInboundSmsRoute
   ApiPublicWebhooksWhopRoute: typeof ApiPublicWebhooksWhopRoute
+  ApiSocialCallbackPlatformRoute: typeof ApiSocialCallbackPlatformRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   ApiPublicDialerSmsInboundProviderRoute: typeof ApiPublicDialerSmsInboundProviderRoute
@@ -1090,6 +1104,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social/callback/$platform': {
+      id: '/api/social/callback/$platform'
+      path: '/api/social/callback/$platform'
+      fullPath: '/api/social/callback/$platform'
+      preLoaderRoute: typeof ApiSocialCallbackPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/whop': {
       id: '/api/public/webhooks/whop'
       path: '/api/public/webhooks/whop'
@@ -1320,6 +1341,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicWebhooksInboundSmsRoute: ApiPublicWebhooksInboundSmsRoute,
   ApiPublicWebhooksWhopRoute: ApiPublicWebhooksWhopRoute,
+  ApiSocialCallbackPlatformRoute: ApiSocialCallbackPlatformRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   ApiPublicDialerSmsInboundProviderRoute:
