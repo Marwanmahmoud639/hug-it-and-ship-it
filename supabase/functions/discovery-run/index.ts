@@ -693,33 +693,43 @@ async function serperFreeDmHunt(
   location: string | null,
   serperKey: string | null,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
+  const loc = location || "USA";
+  const stateToken = loc.split(",").map((part) => part.trim()).find((part) => /^[A-Z]{2}$/.test(part)) || "";
   const queries = [
-    `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President)`,
-    `site:biggerpockets.com "${companyName}"`,
-    `site:facebook.com "${companyName}" owner`,
-    `"${companyName}" CEO OR owner OR founder${location ? ` ${location}` : ""}`,
-    // Loose fallback matching user's example URL shape: name + full company
-    `${companyName}${location ? ` ${location}` : ""} owner OR founder`,
+    { source: "linkedin_people", q: `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President) ${loc}` },
+    { source: "linkedin_company", q: `site:linkedin.com/in "${companyName}" "${loc}" (owner OR founder OR president)` },
+    { source: "google_role", q: `"${companyName}" (owner OR founder OR CEO OR president) ${loc}` },
+    { source: "company_about", q: `"${companyName}" (about OR team OR leadership) (owner OR founder OR CEO) ${loc}` },
+    { source: "state_registry", q: `"${companyName}" "Secretary of State" ${stateToken || loc}` },
+    { source: "opencorporates", q: `"${companyName}" site:opencorporates.com ${stateToken || loc}` },
+    { source: "bizapedia", q: `"${companyName}" site:bizapedia.com ${stateToken || loc}` },
+    { source: "facebook", q: `site:facebook.com "${companyName}" (owner OR founder) ${loc}` },
+    { source: "owner_responses", q: `"${companyName}" "owner" "response" ${loc}` },
+    { source: "wide_web", q: `${companyName} ${loc} owner founder CEO president` },
   ];
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
-  for (const q of queries) {
+  for (const item of queries) {
     try {
-      const { organic } = await webSearch(q, { serperKey, num: 6 });
+      const { organic } = await webSearch(item.q, { serperKey, num: 8, timeoutMs: 5500 });
       for (const r of organic) {
-        const blob = `${r.title || ""} ${r.snippet || ""}`;
+        const blob = `${r.title || ""} ${r.snippet || ""} ${r.link || ""}`;
         const roleMatch = blob.match(ROLE_RX);
         if (!roleMatch) continue;
         const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
-        const candidateName = titleParts[0] || "";
+        const candidateName = titleParts.find((part) => {
+          const words = part.trim().split(/\s+/);
+          return words.length >= 2 && words.length <= 5 && /^[A-Z][a-zA-Z'\-.]+(?:\s+[A-Z][a-zA-Z'\-.]+)+$/.test(part);
+        }) || "";
         const words = candidateName.trim().split(/\s+/);
         if (words.length < 2 || words.length > 5) continue;
         if (candidateName.length < 4 || candidateName.length > 60) continue;
         if (/^[\d\W]+$/.test(candidateName)) continue;
         if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue;
+        if (!strictIdentityMatch(blob, candidateName, companyName, loc.split(",")[0]?.trim())) continue;
         const source = (r.link || "").includes("linkedin.com") ? "linkedin"
           : (r.link || "").includes("biggerpockets.com") ? "biggerpockets"
           : (r.link || "").includes("facebook.com") ? "facebook"
-          : "google";
+          : item.source;
         return {
           name: candidateName,
           title: roleMatch[0],
@@ -1130,7 +1140,7 @@ async function runPipeline(searchId: string) {
     const location = (search.location as string) || "";
 
     // ── US-only gate ────────────────────────────────────────────────────────
-    const country = resolveCountry(location) === "USA" ? "USA" : "USA"; // force US
+    const country = "USA";
     const countryHint = "USA";
 
     async function checkCancelled(): Promise<boolean> {
@@ -1140,7 +1150,7 @@ async function runPipeline(searchId: string) {
 
     if (await checkCancelled()) return;
 
-    // ── STEP 1: business discovery (parallel, USA/Canada only) ─────────────
+    // ── STEP 1: business discovery (parallel, US-only) ─────────────────────
     await setStepRunning(searchId, teamId, "business", `Scraping ${country} directories`);
     await logActivity(searchId, teamId, "business", "running", "🌎",
       `Scraping Google Maps, Reddit, Yelp, Yellow Pages, Angi, BBB, BiggerPockets, Craigslist (${country})…`,
@@ -1455,10 +1465,10 @@ async function runPipeline(searchId: string) {
           const perBizDeadline = Math.min(skiptraceDeadline, Date.now() + PER_BUSINESS_MS);
 
           // ⓪ FREE: Open-web search (Serper if available, else DuckDuckGo / Google SERP)
-          if (b.contact_name && Date.now() < perBizDeadline) {
+          if (Date.now() < perBizDeadline) {
             try {
               const webResult = await freeSkiptraceViaWeb(
-                { name: b.contact_name, company: b.name, city: b.city, state: b.state, website: b.website },
+                { name: b.contact_name || b.name, company: b.name, city: b.city, state: b.state, website: b.website },
                 serperKeySkip,
                 firecrawlKeyEnrich || null,
                 perBizDeadline,
@@ -1680,6 +1690,7 @@ async function runPipeline(searchId: string) {
         name: b.contact_name || b.name,
         title: b.contact_title || null,
         company: b.name,
+        website: b.website || null,
         email: primaryEmail,
         phone: primaryPhone,
         linkedin_url: b.linkedin_url || null,

@@ -226,3 +226,22 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* Hide Lovable "Made with" badge across all injection methods */
+.lovable-badge,
+[data-lovable-badge],
+iframe[src*="lovable"],
+a[href*="lovable.app"][target="_blank"],
+div[class*="lovable-badge"],
+div[id*="lovable-badge"],
+span[class*="lovable-badge"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}

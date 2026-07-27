@@ -41,9 +41,9 @@ export function LocationAutocomplete({ id, value, onChange, placeholder }: Props
     if (q.length < 2) { setSuggestions([]); setOpen(false); return; }
     debounceRef.current = setTimeout(async () => {
       try {
-        // Restrict suggestions to USA + Canada only (matches discovery pipeline scope).
+        // Restrict suggestions to the United States only (matches Discovery scope).
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us,ca&q=${encodeURIComponent(q)}&limit=6`,
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&q=${encodeURIComponent(q)}&limit=6`,
           { headers: { "Accept-Language": "en-US,en" } }
         );
         if (!res.ok) return;
@@ -52,7 +52,7 @@ export function LocationAutocomplete({ id, value, onChange, placeholder }: Props
         const out: string[] = [];
         for (const r of data) {
           const cc = r.address?.country_code?.toLowerCase();
-          if (cc && cc !== "us" && cc !== "ca") continue;
+          if (cc && cc !== "us") continue;
           const label = formatResult(r);
           if (!seen.has(label)) { seen.add(label); out.push(label); }
         }
@@ -78,7 +78,7 @@ export function LocationAutocomplete({ id, value, onChange, placeholder }: Props
         value={value}
         onChange={(e) => { onChange(e.target.value); search(e.target.value); }}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
-        placeholder={placeholder || "City, State (USA or Canada only)"}
+        placeholder={placeholder || "City or ZIP in the United States"}
         className="h-12 pl-9 text-sm"
         autoComplete="off"
       />
