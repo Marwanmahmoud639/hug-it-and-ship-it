@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  provisionAccountByEmail, lookupAccountByEmail,
+  provisionAccountByEmail, lookupAccountByEmail, adjustCredits,
   listRateCard, updateRateCardEntry, getBillingOverview,
 } from "@/lib/provisioning.functions";
 import { Card } from "@/components/ui/card";
@@ -127,7 +127,7 @@ export function AccountProvisioningCard() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label>Plan</Label>
+              <Label>Plan label</Label>
               <Select value={plan} onValueChange={(v) => setPlan(v as typeof plan)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -136,10 +136,18 @@ export function AccountProvisioningCard() {
                   <SelectItem value="agency">Agency</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                A label only. Credits, features, and limits below are set independently, so
+                custom arrangements don't have to fit a preset.
+              </p>
             </div>
             <div className="grid gap-1.5">
-              <Label>Credits</Label>
+              <Label>Total credits</Label>
               <Input type="number" min={0} value={credits} onChange={(e) => setCredits(e.target.value)} />
+              <TopUpCredits
+                teamId={loaded.team?.id}
+                onDone={(newTotal) => { setCredits(String(newTotal)); lookupMut.mutate(); }}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label>Team member seats</Label>
@@ -208,6 +216,51 @@ export function AccountProvisioningCard() {
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * Additive credit top-up.
+ *
+ * Kept separate from the "total credits" field because granting more is the
+ * everyday action, and expressing it as a new absolute total is where
+ * arithmetic slips happen.
+ */
+function TopUpCredits({ teamId, onDone }: { teamId?: string; onDone: (total: number) => void }) {
+  const adjust = useServerFn(adjustCredits);
+  const [amount, setAmount] = useState("");
+
+  const mut = useMutation({
+    mutationFn: () => adjust({ data: { teamId: teamId!, delta: Number(amount) } as never }),
+    onSuccess: (r: any) => {
+      toast.success(`Credits updated — new total ${r.creditsTotal.toLocaleString()}`);
+      setAmount("");
+      onDone(r.creditsTotal);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Top-up failed"),
+  });
+
+  if (!teamId) return null;
+
+  return (
+    <div className="flex gap-2 items-center">
+      <Input
+        type="number"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        placeholder="Add / remove"
+        className="h-8 text-xs"
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        className="shrink-0"
+        disabled={mut.isPending || !amount || Number(amount) === 0}
+        onClick={() => mut.mutate()}
+      >
+        {mut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
+      </Button>
+    </div>
   );
 }
 

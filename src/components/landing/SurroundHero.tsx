@@ -23,7 +23,7 @@ export function SurroundHero() {
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative">
           <div className="absolute inset-0 rounded-full r4d-bg-lime blur-2xl opacity-25" />
-          <div className="relative w-28 h-28 rounded-full r4d-marketing-dark border-2 border-primary flex flex-col items-center justify-center r4d-glow-lime">
+          <div className="relative w-28 h-28 rounded-full bg-black border-2 border-[#C6F432] flex flex-col items-center justify-center r4d-glow-lime">
             <User className="w-6 h-6 r4d-lime mb-1" strokeWidth={2} />
             <div className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Decision</div>
             <div className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Maker</div>

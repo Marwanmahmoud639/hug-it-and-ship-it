@@ -1491,7 +1491,10 @@ async function runPipeline(searchId: string) {
         // If title passes the DM filter, set this as our contact — also accept if no title filter set
         if ((titleFilter.length === 0 || dmRegex.test(title)) && !blockRegex.test(title)) {
           b.contact_name = cand.name || `${cand.first_name || ""} ${cand.last_name || ""}`.trim();
-          b.contact_title = title || null;
+          // undefined, not null: the field is declared optional (contact_title?:
+          // string), and null would also defeat the ||= merge at line 171 that
+          // lets a later source fill in a title this one didn't have.
+          b.contact_title = title || undefined;
           // Pull any email/phone Apollo already returned (free, no credit cost)
           const apolloEmail = cand.email;
           const apolloPhones: string[] = (cand.phone_numbers || []).map((x: any) => x.sanitized_number || x.raw_number).filter(Boolean);

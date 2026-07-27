@@ -85,6 +85,43 @@ export const provisionAccountByEmail = createServerFn({ method: "POST" })
     return { ok: true, teamId, userId: target.id };
   });
 
+/**
+ * Add (or remove) credits on an account by a delta.
+ *
+ * Separate from provisionAccountByEmail's absolute creditsTotal because
+ * topping up is the common operation and doing it by "set the new total"
+ * invites arithmetic mistakes. Plan tier is deliberately not involved: custom
+ * arrangements are normal, so credits are whatever you decide to grant rather
+ * than something a preset dictates.
+ */
+export const adjustCredits = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      teamId: z.string().uuid(),
+      delta: z.number().int().refine((n) => n !== 0, "Enter a non-zero amount"),
+      note: z.string().max(500).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuper(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: team, error: readErr } = await (supabaseAdmin as any)
+      .from("teams").select("credits_total").eq("id", data.teamId).maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!team) throw new Error("Team not found");
+
+    // Floor at zero — a negative allocation would read as unlimited in any
+    // remaining-credits calculation.
+    const next = Math.max(0, Number(team.credits_total ?? 0) + data.delta);
+    const { error } = await (supabaseAdmin as any)
+      .from("teams").update({ credits_total: next }).eq("id", data.teamId);
+    if (error) throw new Error(error.message);
+
+    return { ok: true, creditsTotal: next };
+  });
+
 /** Team + entitlement state for one email, to prefill the provisioning form. */
 export const lookupAccountByEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
