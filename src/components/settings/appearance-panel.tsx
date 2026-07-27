@@ -59,7 +59,7 @@ export function AppearancePanel() {
                   <span className="font-medium text-sm">{p.label}</span>
                   {active
                     ? <Badge className="text-[10px]"><Check className="w-3 h-3 mr-1" /> Active</Badge>
-                    : p.key === "navy" && <Badge variant="secondary" className="text-[10px]">Default</Badge>}
+                    : p.key === "money" && <Badge variant="secondary" className="text-[10px]">Default</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
                 <div className="flex gap-1.5 mt-3">

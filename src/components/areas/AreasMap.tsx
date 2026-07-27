@@ -142,10 +142,34 @@ export function AreasMap({
         map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
       }
     } else {
+      // Businesses sharing an address — a plaza, a tower, a strip mall — geocode
+      // to identical coordinates, so their markers land exactly on top of each
+      // other and only the last one is clickable. Fan duplicates out around a
+      // small circle so each business is individually visible and selectable.
+      const seen = new Map<string, number>();
+      const OVERLAP_OFFSET_DEG = 0.00012; // ~13m, tight enough to stay accurate
+
       validContacts.forEach((contact) => {
+        const key = `${contact.lat!.toFixed(5)},${contact.lng!.toFixed(5)}`;
+        const nth = seen.get(key) ?? 0;
+        seen.set(key, nth + 1);
+
+        let { lat, lng } = { lat: contact.lat!, lng: contact.lng! };
+        if (nth > 0) {
+          // Deterministic spiral: same input always renders the same way, so
+          // markers don't jump between renders.
+          const angle = (nth * 2.39996) % (Math.PI * 2); // golden angle, spreads evenly
+          const ring = 1 + Math.floor(nth / 8);
+          lat += Math.sin(angle) * OVERLAP_OFFSET_DEG * ring;
+          // Longitude degrees shrink toward the poles; scale so the visual
+          // offset stays circular rather than stretching east-west.
+          const latScale = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+          lng += (Math.cos(angle) * OVERLAP_OFFSET_DEG * ring) / latScale;
+        }
+
         const color = getMarkerColor(contact);
         const marker = new g.maps.Marker({
-          position: { lat: contact.lat!, lng: contact.lng! },
+          position: { lat, lng },
           map,
           title: contact.name || contact.company || "",
           icon: {
@@ -220,9 +244,18 @@ export function AreasMap({
     );
   }
 
+  // Contacts with no coordinates can't be plotted. Silently dropping them makes
+  // the map look like it lost businesses, so say how many aren't shown.
+  const unmappable = contacts.filter((c) => c.lat == null || c.lng == null).length;
+
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="absolute inset-0 rounded-xl overflow-hidden" />
+      {unmappable > 0 && (
+        <div className="absolute bottom-3 left-3 z-10 rounded-lg bg-card/95 border border-border px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+          {unmappable} {unmappable === 1 ? "business has" : "businesses have"} no location yet — not shown on the map
+        </div>
+      )}
       {hover &&
         createPortal(
           <div

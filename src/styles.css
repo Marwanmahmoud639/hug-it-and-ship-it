@@ -42,32 +42,102 @@
   --color-sidebar-accent: var(--sidebar-accent);
 }
 
-/* ─── Default palette: "navy" ────────────────────────────────────────────────
-   Off-white grey surfaces with dark navy in place of black. Navy carries the
-   primary actions; lime is kept as the accent so the brand highlight survives
-   without driving every button. The previous lime-led look is preserved intact
-   under [data-palette="lime"] further down, selectable in theme settings.
+/* ─── Default palette: "money" ───────────────────────────────────────────────
+   Black surfaces with dollar green as the primary. The green is #5db655 —
+   close to US currency green but lifted for legibility: the literal banknote
+   shade (#85BB65) is too desaturated to carry buttons and links.
 
-   Colours are oklch so lightness is perceptually even: the L value can be read
-   as actual apparent brightness, which is what keeps text contrast honest
-   across both modes.                                                          */
+   Colours are oklch so lightness is perceptually even: the L value reads as
+   actual apparent brightness, which is what keeps contrast honest across both
+   modes. Earlier palettes (navy, lime) are preserved below and selectable in
+   Settings > Appearance.                                                      */
 
-/* Light — off-white grey bg, dark navy text, navy primary, lime accent */
+/* Light — white bg, near-black text, dollar green primary */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.968 0.004 250);   /* off-white grey */
-  --foreground: oklch(0.22 0.04 255);     /* dark navy, never pure black */
-  --card: oklch(0.995 0.002 250);         /* near-white, lifts off the grey */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+  /* Darker than the dark-mode green so white button text stays legible. */
+  --primary: oklch(0.52 0.13 147);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.18 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.93 0.05 145);
+  --accent-foreground: oklch(0.18 0 0);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.52 0.13 147);
+  --warning: oklch(0.72 0.17 75);
+  --border: oklch(0.90 0 0);
+  --input: oklch(0.92 0 0);
+  --ring: oklch(0.52 0.13 147);
+  --sidebar: oklch(0.975 0.004 145);
+  --sidebar-foreground: oklch(0.18 0 0);
+  --sidebar-border: oklch(0.89 0.004 145);
+  --sidebar-accent: oklch(0.92 0.05 145);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 20px rgba(45, 138, 62, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-primary-glow: 0 0 16px rgba(45, 138, 62, 0.35);
+  --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark — black bg, white text, dollar green primary */
+.dark {
+  --background: oklch(0.10 0 0);          /* black */
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.70 0.16 142);        /* #5db655 dollar green */
+  --primary-foreground: oklch(0.12 0 0);  /* black text on green */
+  --secondary: oklch(0.19 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.19 0 0);
+  --muted-foreground: oklch(0.68 0 0);
+  --accent: oklch(0.26 0.05 142);         /* green-tinted surface */
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.70 0.16 142);
+  --warning: oklch(0.78 0.17 75);
+  --border: oklch(0.24 0 0);
+  --input: oklch(0.26 0 0);
+  --ring: oklch(0.70 0.16 142);
+  --sidebar: oklch(0.08 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.21 0 0);
+  --sidebar-accent: oklch(0.26 0.05 142);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 20px rgba(93, 182, 85, 0.20), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-primary-glow: 0 0 16px rgba(93, 182, 85, 0.45);
+  --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Secondary palette: "navy" ──────────────────────────────────────────────
+   Off-white grey with dark navy, lime accent. Kept selectable.               */
+[data-palette="navy"] {
+  --background: oklch(0.968 0.004 250);
+  --foreground: oklch(0.22 0.04 255);
+  --card: oklch(0.995 0.002 250);
   --card-foreground: oklch(0.22 0.04 255);
   --popover: oklch(0.995 0.002 250);
   --popover-foreground: oklch(0.22 0.04 255);
-  --primary: oklch(0.38 0.10 255);        /* dark navy */
+  --primary: oklch(0.38 0.10 255);
   --primary-foreground: oklch(0.98 0.003 250);
   --secondary: oklch(0.928 0.006 250);
   --secondary-foreground: oklch(0.24 0.04 255);
   --muted: oklch(0.928 0.006 250);
   --muted-foreground: oklch(0.48 0.02 255);
-  --accent: oklch(0.85 0.22 130);         /* lime, retained as the accent */
+  --accent: oklch(0.85 0.22 130);
   --accent-foreground: oklch(0.22 0.04 255);
   --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
@@ -87,24 +157,20 @@
   --shadow-sidebar: 4px 0 24px rgba(23, 32, 58, 0.05);
 }
 
-/* Dark — dark navy bg (not black), off-white text, lime accent.
-   Lightness is held at 0.24+ with chroma 0.045+ so the surfaces read as navy
-   rather than near-black: at L 0.17 the blue is present numerically but the
-   eye still sees black, which defeats the point of choosing navy. */
-.dark {
-  --background: oklch(0.24 0.050 255);    /* #0e2036 — blue leads red by 40 */
+[data-palette="navy"].dark {
+  --background: oklch(0.24 0.050 255);
   --foreground: oklch(0.968 0.004 250);
   --card: oklch(0.285 0.048 255);
   --card-foreground: oklch(0.968 0.004 250);
   --popover: oklch(0.305 0.048 255);
   --popover-foreground: oklch(0.968 0.004 250);
-  --primary: oklch(0.72 0.13 250);        /* lifted blue — the 0.38 navy is unreadable on a dark ground */
+  --primary: oklch(0.72 0.13 250);
   --primary-foreground: oklch(0.18 0.04 255);
   --secondary: oklch(0.330 0.045 255);
   --secondary-foreground: oklch(0.968 0.004 250);
   --muted: oklch(0.330 0.045 255);
   --muted-foreground: oklch(0.72 0.020 250);
-  --accent: oklch(0.82 0.22 130);         /* lime */
+  --accent: oklch(0.82 0.22 130);
   --accent-foreground: oklch(0.20 0.05 255);
   --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);

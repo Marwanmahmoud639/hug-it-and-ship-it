@@ -5,17 +5,23 @@ type Theme = "system" | "light" | "dark";
 /**
  * Colour palette, independent of light/dark.
  *
- * `navy` is the default: off-white grey surfaces, dark navy instead of black,
- * lime kept as the accent. `lime` is the original white/black/lime scheme,
- * retained so anyone who prefers it can switch back.
+ * `money` is the default: black surfaces with dollar green as the primary.
+ * `navy` (off-white grey with dark navy) and `lime` (the original white/black/
+ * lime scheme) are retained so either can be switched back to.
  */
-export type Palette = "navy" | "lime";
+export type Palette = "money" | "navy" | "lime";
 
 export const PALETTES: { key: Palette; label: string; description: string; swatch: string[] }[] = [
   {
+    key: "money",
+    label: "Money",
+    description: "Black with dollar green. The default.",
+    swatch: ["oklch(0.10 0 0)", "oklch(0.70 0.16 142)", "oklch(0.97 0 0)"],
+  },
+  {
     key: "navy",
     label: "Navy",
-    description: "Off-white grey with dark navy. Lime kept as the accent.",
+    description: "Off-white grey with dark navy, lime accent.",
     swatch: ["oklch(0.968 0.004 250)", "oklch(0.38 0.10 255)", "oklch(0.85 0.22 130)"],
   },
   {
@@ -55,17 +61,17 @@ function applyTheme(theme: Theme) {
 function applyPalette(palette: Palette) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  // `navy` is what :root already defines, so it carries no attribute — that
+  // `money` is what :root already defines, so it carries no attribute — that
   // keeps the default path free of an extra selector and means a corrupted
   // stored value degrades to the default rather than an unstyled page.
-  if (palette === "navy") root.removeAttribute("data-palette");
+  if (palette === "money") root.removeAttribute("data-palette");
   else root.setAttribute("data-palette", palette);
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [resolved, setResolved] = useState<"light" | "dark">("dark");
-  const [palette, setPaletteState] = useState<Palette>("navy");
+  const [palette, setPaletteState] = useState<Palette>("money");
 
   useEffect(() => {
     const storedTheme = (typeof localStorage !== "undefined" && (localStorage.getItem(THEME_KEY) as Theme)) || "system";
@@ -73,7 +79,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setResolved(applyTheme(storedTheme));
 
     const rawPalette = typeof localStorage !== "undefined" ? localStorage.getItem(PALETTE_KEY) : null;
-    const storedPalette: Palette = rawPalette === "lime" ? "lime" : "navy";
+    const storedPalette: Palette =
+      rawPalette === "lime" ? "lime" : rawPalette === "navy" ? "navy" : "money";
     setPaletteState(storedPalette);
     applyPalette(storedPalette);
 
