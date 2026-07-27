@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutGrid, Search, Users, Kanban, Megaphone, BarChart3, UsersRound, Settings,
   ChevronsLeft, ChevronsRight, Shield, Zap, GitBranch, FileText, Share2, Radar, Inbox, MapPin, Building2, PhoneCall,
+  Brain, BookOpen,
 } from "lucide-react";
 import { useState, memo } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ const ITEMS: NavItem[] = [
   { to: "/monitors", section: "monitors",    label: "Monitors",    icon: Radar,       roles: ["admin", "manager"],          group: "core" },
   { to: "/portals", section: "portals",     label: "Portals",     icon: Share2,      roles: ["admin", "manager"],          group: "core" },
   { to: "/ai-caller", section: "ai_caller",  label: "AI Caller",   icon: PhoneCall,   roles: ["admin", "manager", "agent"], group: "core" },
+  { to: "/intelligence", section: "intelligence", label: "Intelligence", icon: Brain, roles: ["admin", "manager"],          group: "core" },
+  { to: "/knowledge-base", section: "knowledge_base", label: "Knowledge Base", icon: BookOpen, roles: ["admin", "manager", "agent"], group: "core" },
   { to: "/analytics", section: "analytics",   label: "Analytics",   icon: BarChart3,   roles: ["admin", "manager"],          group: "manage" },
   { to: "/team", section: "team",        label: "Team",        icon: UsersRound,  roles: ["admin"],                     group: "manage" },
   { to: "/agency", label: "Agency",      icon: Building2,   roles: [], superOnly: true,                  group: "manage" },

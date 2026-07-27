@@ -98,9 +98,10 @@ async function serperStrictMatchUrl(
   fullName: string,
   company: string | undefined,
   city: string | undefined,
+  firecrawlKey: string | null = null,
 ): Promise<string | null> {
   try {
-    const { organic } = await webSearch(query, { serperKey: apiKey, num: 8, timeoutMs: 5000 });
+    const { organic } = await webSearch(query, { serperKey: apiKey, firecrawlKey, num: 8, timeoutMs: 5000 });
     for (const o of organic) {
       if (!o.link) continue;
       try {
@@ -122,12 +123,13 @@ async function enrichSocials(
   company: string | undefined,
   serperKey: string | null | undefined,
   city?: string | undefined,
+  firecrawlKey?: string | null,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
   if (!fullName) return {};
   const q = `"${fullName}"${company ? ` "${company}"` : ""}${city ? ` "${city}"` : ""}`;
   const results = await Promise.allSettled(
     SOCIAL_PLATFORMS.map((p) =>
-      serperStrictMatchUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx, fullName, company, city)
+      serperStrictMatchUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx, fullName, company, city, firecrawlKey ?? null)
         .then((url) => ({ key: p.key, url })),
     ),
   );
@@ -590,18 +592,56 @@ async function hunterCombinedFind(email: string, apiKey: string): Promise<{ firs
 
 // ─── FREE decision-maker hunt via Serper (LinkedIn / BiggerPockets / FB / web)
 // ─── Free web search (no API key) ────────────────────────────────────────────
-// Unified search that prefers Serper (if key present), else DuckDuckGo HTML,
-// else scrapes Google SERP directly. Returns a normalized organic array.
+// Unified search: Serper first (if key present), then Firecrawl search, then
+// the legacy direct-scrape tiers. Returns a normalized organic array.
 type WebResult = { title: string; snippet: string; link: string };
+
+// Firecrawl's search endpoint. Unlike raw SERP scraping it runs server-side
+// behind their own anti-bot handling, so it keeps working from datacenter IPs
+// (Supabase Edge Functions) where Google/DDG/Bing/Mojeek all serve challenge
+// pages instead of results.
+async function firecrawlSearch(
+  q: string,
+  apiKey: string,
+  num: number,
+  timeoutMs: number,
+): Promise<WebResult[]> {
+  const res = await fetch("https://api.firecrawl.dev/v1/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ query: q, limit: num }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`firecrawl search ${res.status}`);
+  const data = await res.json();
+  if (!data.success) throw new Error(`firecrawl search: ${data.error || "unknown"}`);
+  // Firecrawl returns title/description either top-level or under metadata
+  // depending on whether the result was scraped; accept both shapes.
+  return ((data.data || []) as any[]).map((item) => ({
+    title: (item.title || item.metadata?.title || "") as string,
+    snippet: (item.description || item.metadata?.description || item.markdown || "") as string,
+    link: (item.url || item.metadata?.sourceURL || "") as string,
+  })).filter((r) => r.link);
+}
+
 async function webSearch(
   q: string,
-  opts: { serperKey?: string | null; num?: number; timeoutMs?: number } = {},
-): Promise<{ organic: WebResult[]; source: "serper" | "duckduckgo" | "google" | "none" }> {
+  opts: {
+    serperKey?: string | null;
+    firecrawlKey?: string | null;
+    num?: number;
+    timeoutMs?: number;
+    // When present, paid tiers are skipped once the run hits its spend ceiling
+    // and each paid call that does happen is written to the cost ledger.
+    budget?: RunBudget;
+  } = {},
+): Promise<{ organic: WebResult[]; source: "serper" | "firecrawl" | "duckduckgo" | "google" | "none" }> {
   const num = opts.num ?? 8;
   const timeoutMs = opts.timeoutMs ?? 6000;
+  const budget = opts.budget;
 
   // 1) Serper (paid, best signal)
-  if (opts.serperKey) {
+  if (opts.serperKey && (!budget || budget.canSpend("serper_search"))) {
     try {
       const res = await fetch("https://google.serper.dev/search", {
         method: "POST",
@@ -618,11 +658,30 @@ async function webSearch(
         // downstream regex extractors can pull phones/emails out of it.
         const kg = data.knowledgeGraph || data.answerBox;
         if (kg) organic.push({ title: kg.title || "", snippet: JSON.stringify(kg), link: kg.website || "" });
-        if (organic.length) return { organic, source: "serper" };
+        if (organic.length) {
+          await budget?.record("serper", "serper_search");
+          return { organic, source: "serper" };
+        }
       }
     } catch { /* fall through */ }
   }
 
+  // 1b) Firecrawl search — the working fallback when no Serper key is set.
+  if (opts.firecrawlKey && (!budget || budget.canSpend("firecrawl_search"))) {
+    try {
+      const organic = await firecrawlSearch(q, opts.firecrawlKey, num, timeoutMs);
+      await budget?.record("firecrawl", "firecrawl_search", 1, organic.length > 0);
+      if (organic.length) return { organic, source: "firecrawl" };
+    } catch (e) {
+      await budget?.record("firecrawl", "firecrawl_search", 1, false, String(e));
+    }
+  }
+
+  // NOTE: the direct-scrape tiers below are retained as a last resort only.
+  // As of 2026-07 they are effectively dead — Google serves an "enablejs"
+  // page, DuckDuckGo returns an anti-bot challenge, Bing a proof-of-work
+  // challenge, and Mojeek a captcha. They are kept because they cost nothing
+  // to attempt, but a Serper or Firecrawl key is required in practice.
   const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
   // 2) DuckDuckGo HTML (free, no key)
@@ -692,6 +751,8 @@ async function serperFreeDmHunt(
   companyName: string,
   location: string | null,
   serperKey: string | null,
+  firecrawlKey: string | null = null,
+  budget?: RunBudget,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
   const loc = location || "USA";
   const stateToken = loc.split(",").map((part) => part.trim()).find((part) => /^[A-Z]{2}$/.test(part)) || "";
@@ -710,7 +771,12 @@ async function serperFreeDmHunt(
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
   for (const item of queries) {
     try {
-      const { organic } = await webSearch(item.q, { serperKey, num: 8, timeoutMs: 5500 });
+      // item.q + the wider result count come from the improved query set;
+      // firecrawlKey and budget are what actually give webSearch a working
+      // backend and keep the ten-query sweep inside the run's spend ceiling.
+      const { organic } = await webSearch(item.q, {
+        serperKey, firecrawlKey, num: 8, timeoutMs: 5500, budget,
+      });
       for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""} ${r.link || ""}`;
         const roleMatch = blob.match(ROLE_RX);
@@ -799,7 +865,7 @@ async function freeSkiptraceViaWeb(
   for (const q of queries) {
     if (overBudget()) break;
     try {
-      const { organic, source } = await webSearch(q, { serperKey, num: 10, timeoutMs: 5000 });
+      const { organic, source } = await webSearch(q, { serperKey, firecrawlKey, num: 10, timeoutMs: 5000 });
       if (!organic.length) continue;
 
       for (const r of organic) {
@@ -956,6 +1022,32 @@ async function checkMx(domain: string): Promise<boolean> {
   }
 }
 
+// ─── Mailbox-level verification via MillionVerifier ──────────────────────────
+// checkMx() above only proves the DOMAIN accepts mail, which is why
+// pattern-generated addresses still bounce. This checks the actual mailbox.
+// Returns null when we can't get a definitive answer (no key, timeout, unknown),
+// so callers can fall back to MX-only behaviour instead of dropping good leads.
+type MvResult = { deliverable: boolean; result: string };
+async function verifyEmailMillionVerifier(
+  email: string,
+  apiKey: string,
+): Promise<MvResult | null> {
+  try {
+    const url = `https://api.millionverifier.com/api/v3/?api=${encodeURIComponent(apiKey)}&email=${encodeURIComponent(email)}&timeout=10`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const result = String(j.result || "").toLowerCase();
+    // "ok" = deliverable. "catch_all" and "unknown" are indeterminate, not proof
+    // of failure, so we treat them as inconclusive rather than dropping them.
+    if (result === "ok") return { deliverable: true, result };
+    if (result === "invalid" || result === "disposable") return { deliverable: false, result };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function generatePatterns(firstName: string, lastName: string, domain: string): string[] {
   const f = firstName.toLowerCase();
   const l = lastName.toLowerCase();
@@ -1076,6 +1168,59 @@ async function logActivity(
   }
 }
 
+// ─── Paid-vendor cost ledger + per-run budget ceiling ────────────────────────
+// Users are billed in our own credits; these rows record what a run actually
+// costs US, so margin is measurable and one run can't drain the API budget.
+// Prices are USD per unit as of 2026-07 — update alongside vendor pricing.
+const UNIT_COST_USD: Record<string, number> = {
+  firecrawl_search: 0.002,
+  firecrawl_scrape: 0.002,
+  serper_search: 0.0003,
+  apollo_enrich: 0.02,
+  seamless_search: 0.02,
+  hunter_find: 0.006,
+  millionverifier_verify: 0.0004,
+};
+
+class RunBudget {
+  spentUsd = 0;
+  constructor(
+    private searchId: string,
+    private teamId: string,
+    readonly ceilingUsd: number,
+  ) {}
+
+  /** True when another paid call of this kind would still fit in budget. */
+  canSpend(operation: string, units = 1): boolean {
+    if (this.ceilingUsd <= 0) return false; // 0 = free sources only
+    const cost = (UNIT_COST_USD[operation] ?? 0) * units;
+    return this.spentUsd + cost <= this.ceilingUsd;
+  }
+
+  /** Record a paid call. Never throws — billing telemetry must not break a run. */
+  async record(provider: string, operation: string, units = 1, ok = true, error?: string) {
+    const unit = UNIT_COST_USD[operation] ?? 0;
+    const cost = unit * units;
+    this.spentUsd += cost;
+    try {
+      await SUPABASE.from("api_cost_events").insert({
+        team_id: this.teamId,
+        search_id: this.searchId,
+        search_kind: "discovery",
+        provider,
+        operation,
+        units,
+        unit_cost_usd: unit,
+        cost_usd: cost,
+        ok,
+        error: error ?? null,
+      });
+    } catch (e) {
+      console.error("cost ledger insert failed", e);
+    }
+  }
+}
+
 function scoreContact(b: Business, verifiedEmail: boolean, patternVerified: boolean, verifiedPhone: boolean): number {
   let s = 0;
   if (verifiedEmail) s += 25;
@@ -1131,6 +1276,14 @@ async function runPipeline(searchId: string) {
   await logActivity(searchId, teamId, "start", "info", "🚀", `Pipeline starting for "${search.keyword}"…`, { percent: 1 });
 
   const { data: settings } = await SUPABASE.from("team_settings").select("*").eq("team_id", teamId).maybeSingle();
+
+  // Ceiling on paid-vendor spend for this run. Free sources (OpenStreetMap,
+  // Google Places on the existing key) are never gated by this.
+  const budget = new RunBudget(
+    searchId,
+    teamId,
+    Number(settings?.max_run_cost_usd ?? 1.0),
+  );
 
   const sources_success: Record<string, boolean> = {};
   const sources_failed: Record<string, string> = {};
@@ -1354,10 +1507,11 @@ async function runPipeline(searchId: string) {
       if (b.contact_name) dmCount++;
     }
 
-    // FREE DM hunt: always runs. Uses Serper if key present, else DuckDuckGo
-    // + Google SERP scraping so we never miss decision makers because a key
-    // isn't set.
+    // DM hunt: always runs. Prefers Serper, then Firecrawl search. The direct
+    // SERP-scrape tiers inside webSearch() no longer return results, so one of
+    // those two keys must be configured for this step to find anything.
     const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
+    const firecrawlKeyForDm = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY") || null;
     let freeDmFound = 0;
     {
       const missing = merged.filter(b => !b.contact_name);
@@ -1365,7 +1519,7 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < missing.length; i += BATCH_DM) {
         const slice = missing.slice(i, i + BATCH_DM);
         await Promise.allSettled(slice.map(async (b) => {
-          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm);
+          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
           if (dm) {
             b.contact_name = dm.name;
             b.contact_title = dm.title;
@@ -1392,14 +1546,15 @@ async function runPipeline(searchId: string) {
       const lnk = b.raw?.apollo?.top?.linkedin_url;
       if (lnk) b.linkedin_url ||= lnk;
     }
-    // Socials via web search (Serper if key present, else DuckDuckGo/Google SERP)
+    // Socials via web search (Serper if key present, else Firecrawl search)
     const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
+    const firecrawlKeySocial = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY") || null;
     {
       const BATCH = 5;
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (b) => {
-          const socials = await enrichSocials(b.contact_name, b.name, serperKey, b.city);
+          const socials = await enrichSocials(b.contact_name, b.name, serperKey, b.city, firecrawlKeySocial);
           if (socials.facebook_url) b.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) b.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) b.twitter_url ||= socials.twitter_url;
@@ -1567,6 +1722,10 @@ async function runPipeline(searchId: string) {
     let verifiedEmails = 0;
     let patternVerified = 0;
     let verifiedPhones = 0;
+    const mvKey = (settings?.millionverifier_api_key as string | undefined)
+      || Deno.env.get("MILLIONVERIFIER_API_KEY") || null;
+    let mvChecked = 0;
+    let mvDropped = 0;
 
     for (const b of merged) {
       const domain = b.domain || (b.website ? (() => { try { return new URL(b.website!.startsWith("http") ? b.website! : `https://${b.website}`).hostname.replace(/^www\./, ""); } catch { return null; } })() : null);
@@ -1594,8 +1753,29 @@ async function runPipeline(searchId: string) {
           const mxOk = await checkMx(domain);
           if (mxOk) {
             const patterns = generatePatterns(first, last, domain);
-            b.emails_found = patterns.map(p => ({ email: p, source: "pattern" }));
-            patternVerified += patterns.length;
+            // Pattern addresses are guesses — MX only proves the domain takes
+            // mail, not that these mailboxes exist. When a MillionVerifier key
+            // is configured, check them for real and keep only what's
+            // deliverable, so guessed addresses don't reach a sending campaign.
+            if (mvKey) {
+              const kept: typeof b.emails_found = [];
+              for (const p of patterns) {
+                if (!budget.canSpend("millionverifier_verify")) break;
+                const mv = await verifyEmailMillionVerifier(p, mvKey);
+                await budget.record("millionverifier", "millionverifier_verify", 1, mv !== null);
+                mvChecked++;
+                if (mv?.deliverable) {
+                  kept.push({ email: p, source: "pattern_verified" });
+                  break; // one confirmed mailbox is enough
+                }
+                if (mv && !mv.deliverable) mvDropped++;
+              }
+              b.emails_found = kept;
+              patternVerified += kept.length;
+            } else {
+              b.emails_found = patterns.map(p => ({ email: p, source: "pattern" }));
+              patternVerified += patterns.length;
+            }
           }
         }
       }
@@ -1610,8 +1790,10 @@ async function runPipeline(searchId: string) {
       pattern_verified_emails: patternVerified,
       verified_phones: verifiedPhones,
     }).eq("id", searchId);
-    await setStepDone(searchId, teamId, "verify", { verifiedEmails, patternVerified, verifiedPhones }, ["smtp"], []);
-    await logActivity(searchId, teamId, "verify", "success", "✅", `Verified ${verifiedEmails} emails, ${verifiedPhones} phones`, { percent: 85 });
+    await setStepDone(searchId, teamId, "verify", { verifiedEmails, patternVerified, verifiedPhones, mvChecked, mvDropped }, ["smtp"], []);
+    await logActivity(searchId, teamId, "verify", "success", "✅",
+      `Verified ${verifiedEmails} emails, ${verifiedPhones} phones${mvChecked > 0 ? ` (${mvChecked} mailbox-checked, ${mvDropped} undeliverable removed)` : ""}`,
+      { percent: 85 });
 
     // ── STEP 6: score + auto-pipeline + persist ──────────────────────────
     if (await checkCancelled()) return;
@@ -1837,6 +2019,8 @@ async function runPipeline(searchId: string) {
     await logActivity(searchId, teamId, "finalize", "success", "🎉",
       `Complete! ${merged.length} leads found, ${verifiedEmails + verifiedPhones} verified, ${autoAdded} auto-added to pipeline`,
       { count: merged.length, percent: 100 });
+    // Internal cost telemetry — not surfaced to end users, who see credits only.
+    console.log(`run ${searchId} vendor cost: $${budget.spentUsd.toFixed(4)} of $${budget.ceilingUsd.toFixed(2)} ceiling`);
   } catch (err) {
     console.error("pipeline failed", err);
     const msg = String(err).slice(0, 300);

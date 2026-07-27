@@ -17,6 +17,9 @@ export const startDiscovery = createServerFn({ method: "POST" })
     const { data: profile } = await supabase.from("profiles").select("team_id").eq("id", userId).single();
     if (!profile?.team_id) throw new Error("No team");
 
+    const { assertEntitled } = await import("@/lib/entitlements.server");
+    await assertEntitled(profile.team_id, "discovery");
+
     const { data: quota } = await supabase.rpc("consume_trial_quota" as never, {
       _team_id: profile.team_id, _kind: "discovery", _amount: 1,
     } as never);

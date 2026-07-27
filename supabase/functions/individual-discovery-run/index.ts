@@ -90,8 +90,8 @@ async function freeSkiptraceIndividual(
 
   for (const q of queries) {
     try {
-      const organic = await unifiedSearch(q, serperKey || null, 10);
-      const providerLabel = serperKey ? "serper_web" : "ddg_web";
+      const organic = await unifiedSearch(q, serperKey || null, 10, firecrawlKey);
+      const providerLabel = serperKey ? "serper_web" : firecrawlKey ? "firecrawl_web" : "ddg_web";
       for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         // Strict identity gate: only accept phones/emails from pages whose
@@ -201,7 +201,12 @@ async function duckSearchOrganic(query: string, num = 10): Promise<{ title: stri
   }
 }
 
-async function unifiedSearch(query: string, serperKey: string | null, num = 10): Promise<{ title: string; snippet: string; link: string }[]> {
+async function unifiedSearch(
+  query: string,
+  serperKey: string | null,
+  num = 10,
+  firecrawlKey: string | null = null,
+): Promise<{ title: string; snippet: string; link: string }[]> {
   if (serperKey) {
     try {
       const ctl = new AbortController();
@@ -220,11 +225,37 @@ async function unifiedSearch(query: string, serperKey: string | null, num = 10):
       }
     } catch { /* fall through */ }
   }
+
+  // Firecrawl search — the working fallback. duckSearchOrganic() below now
+  // hits an anti-bot challenge page and returns nothing, so without this
+  // (or a Serper key) the whole people-lookup pipeline finds zero results.
+  if (firecrawlKey) {
+    try {
+      const res = await fetch("https://api.firecrawl.dev/v1/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${firecrawlKey}` },
+        body: JSON.stringify({ query, limit: num }),
+        signal: AbortSignal.timeout(6000),
+      });
+      if (res.ok) {
+        const j = await res.json();
+        if (j.success) {
+          const org = ((j.data || []) as any[]).map((o) => ({
+            title: (o.title || o.metadata?.title || "") as string,
+            snippet: (o.description || o.metadata?.description || o.markdown || "") as string,
+            link: (o.url || o.metadata?.sourceURL || "") as string,
+          })).filter((o) => o.link);
+          if (org.length) return org;
+        }
+      }
+    } catch { /* fall through */ }
+  }
+
   return duckSearchOrganic(query, num);
 }
 
-async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp): Promise<string | null> {
-  const results = await unifiedSearch(query, apiKey || null, 5);
+async function serperTopUrl(query: string, apiKey: string, hostRx: RegExp, firecrawlKey: string | null = null): Promise<string | null> {
+  const results = await unifiedSearch(query, apiKey || null, 5, firecrawlKey);
   for (const o of results) {
     if (!o.link) continue;
     try { if (hostRx.test(new URL(o.link).hostname)) return o.link; } catch { /* ignore */ }
@@ -237,12 +268,13 @@ async function enrichSocials(
   company: string | undefined,
   serperKey: string | undefined,
   city?: string | undefined,
+  firecrawlKey: string | null = null,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
   if (!fullName) return {};
   const q = `"${fullName}"${company ? ` "${company}"` : ""}${city ? ` "${city}"` : ""}`;
   const results = await Promise.allSettled(
     SOCIAL_PLATFORMS.map(async (p) => {
-      const items = await unifiedSearch(`site:${p.site} ${q}`, serperKey || null, 8);
+      const items = await unifiedSearch(`site:${p.site} ${q}`, serperKey || null, 8, firecrawlKey);
       for (const it of items) {
         if (!it.link) continue;
         try {
@@ -349,7 +381,7 @@ async function queryReddit(keyword: string, subreddits: string[], limit = 30): P
   }
 }
 
-async function queryGooglePeople(keyword: string, location: string, apiKey: string | null): Promise<Individual[]> {
+async function queryGooglePeople(keyword: string, location: string, apiKey: string | null, firecrawlKey: string | null = null): Promise<Individual[]> {
   // "profile" answer box only comes from Serper; when we don't have a key we
   // fall through to organic web results via DDG below.
   if (apiKey) {
@@ -377,8 +409,10 @@ async function queryGooglePeople(keyword: string, location: string, apiKey: stri
       }
     } catch { /* fall through to DDG */ }
   }
-  // DDG fallback — extract name-shaped titles from organic results.
-  const items = await duckSearchOrganic(`${keyword} ${location} owner OR founder OR broker`, 20);
+  // Fallback — extract name-shaped titles from organic results. Routed through
+  // unifiedSearch so this uses Firecrawl when available; bare DDG returns an
+  // anti-bot challenge page and yields nothing.
+  const items = await unifiedSearch(`${keyword} ${location} owner OR founder OR broker`, null, 20, firecrawlKey);
   const out: Individual[] = [];
   for (const r of items) {
     const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
@@ -388,13 +422,13 @@ async function queryGooglePeople(keyword: string, location: string, apiKey: stri
     out.push({
       full_name: cand, first_name: words[0], last_name: words.slice(1).join(" "),
       role: "Unknown", city: location.split(",")[0]?.trim(),
-      confidence: 40, sources: ["ddg_google"], raw: { ddg: r },
+      confidence: 40, sources: [firecrawlKey ? "firecrawl_google" : "ddg_google"], raw: { search: r },
     });
   }
   return out.slice(0, 25);
 }
 
-async function querySerperIndividuals(keyword: string, location: string, platform: "linkedin" | "facebook" | "twitter" | "instagram", apiKey: string | null): Promise<Individual[]> {
+async function querySerperIndividuals(keyword: string, location: string, platform: "linkedin" | "facebook" | "twitter" | "instagram", apiKey: string | null, firecrawlKey: string | null = null): Promise<Individual[]> {
   const siteMap = {
     linkedin: "site:linkedin.com/in",
     facebook: "site:facebook.com",
@@ -403,7 +437,7 @@ async function querySerperIndividuals(keyword: string, location: string, platfor
   };
   const q = `${siteMap[platform]} "${keyword}"${location ? ` "${location}"` : ""}`;
   try {
-    const organic = await unifiedSearch(q, apiKey || null, 20);
+    const organic = await unifiedSearch(q, apiKey || null, 20, firecrawlKey);
     const individuals: Individual[] = [];
     for (const r of organic) {
       const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
@@ -510,6 +544,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
     const tasks: Promise<{ name: string; items: Individual[] }>[] = [];
 
     const serperKeyOpt: string | null = (settings?.serper_api_key as string | undefined) || null;
+    const firecrawlKeyOpt: string | null = (settings?.firecrawl_api_key as string | undefined) || null;
 
     if (platforms.includes("linkedin")) {
       if (settings?.apollo_key) {
@@ -517,7 +552,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
           .then((items) => ({ name: "linkedin", items }))
           .catch((e) => { console.error("linkedin failed", e); sources_failed["linkedin"] = String(e); return { name: "linkedin", items: [] }; }));
       } else {
-        tasks.push(querySerperIndividuals(keyword, location, "linkedin", serperKeyOpt)
+        tasks.push(querySerperIndividuals(keyword, location, "linkedin", serperKeyOpt, firecrawlKeyOpt)
           .then((items) => ({ name: "linkedin", items })));
       }
     }
@@ -527,16 +562,16 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
           .then((items) => ({ name: "facebook", items }))
           .catch((e) => { console.error("facebook failed", e); sources_failed["facebook"] = String(e); return { name: "facebook", items: [] }; }));
       } else {
-        tasks.push(querySerperIndividuals(keyword, location, "facebook", serperKeyOpt)
+        tasks.push(querySerperIndividuals(keyword, location, "facebook", serperKeyOpt, firecrawlKeyOpt)
           .then((items) => ({ name: "facebook", items })));
       }
     }
     if (platforms.includes("twitter")) {
-      tasks.push(querySerperIndividuals(keyword, location, "twitter", serperKeyOpt)
+      tasks.push(querySerperIndividuals(keyword, location, "twitter", serperKeyOpt, firecrawlKeyOpt)
           .then((items) => ({ name: "twitter", items })));
     }
     if (platforms.includes("instagram")) {
-      tasks.push(querySerperIndividuals(keyword, location, "instagram", serperKeyOpt)
+      tasks.push(querySerperIndividuals(keyword, location, "instagram", serperKeyOpt, firecrawlKeyOpt)
           .then((items) => ({ name: "instagram", items })));
     }
     if (platforms.includes("reddit")) {
@@ -546,7 +581,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
         .catch((e) => { console.error("reddit failed", e); sources_failed["reddit"] = String(e); return { name: "reddit", items: [] }; }));
     }
     if (platforms.includes("google")) {
-      tasks.push(queryGooglePeople(keyword, location, serperKeyOpt)
+      tasks.push(queryGooglePeople(keyword, location, serperKeyOpt, firecrawlKeyOpt)
         .then((items) => ({ name: "google", items }))
         .catch((e) => { console.error("google failed", e); sources_failed["google"] = String(e); return { name: "google", items: [] }; }));
     }
@@ -592,7 +627,7 @@ async function runIndividualPipeline(searchId: string, roles: string[]) {
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (ind) => {
-          const socials = await enrichSocials(ind.full_name, ind.company, serperKey, ind.city);
+          const socials = await enrichSocials(ind.full_name, ind.company, serperKey, ind.city, firecrawlKey);
           if (socials.facebook_url) ind.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) ind.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) ind.twitter_url ||= socials.twitter_url;
