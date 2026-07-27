@@ -626,13 +626,22 @@ async function firecrawlSearch(
 
 async function webSearch(
   q: string,
-  opts: { serperKey?: string | null; firecrawlKey?: string | null; num?: number; timeoutMs?: number } = {},
+  opts: {
+    serperKey?: string | null;
+    firecrawlKey?: string | null;
+    num?: number;
+    timeoutMs?: number;
+    // When present, paid tiers are skipped once the run hits its spend ceiling
+    // and each paid call that does happen is written to the cost ledger.
+    budget?: RunBudget;
+  } = {},
 ): Promise<{ organic: WebResult[]; source: "serper" | "firecrawl" | "duckduckgo" | "google" | "none" }> {
   const num = opts.num ?? 8;
   const timeoutMs = opts.timeoutMs ?? 6000;
+  const budget = opts.budget;
 
   // 1) Serper (paid, best signal)
-  if (opts.serperKey) {
+  if (opts.serperKey && (!budget || budget.canSpend("serper_search"))) {
     try {
       const res = await fetch("https://google.serper.dev/search", {
         method: "POST",
@@ -649,17 +658,23 @@ async function webSearch(
         // downstream regex extractors can pull phones/emails out of it.
         const kg = data.knowledgeGraph || data.answerBox;
         if (kg) organic.push({ title: kg.title || "", snippet: JSON.stringify(kg), link: kg.website || "" });
-        if (organic.length) return { organic, source: "serper" };
+        if (organic.length) {
+          await budget?.record("serper", "serper_search");
+          return { organic, source: "serper" };
+        }
       }
     } catch { /* fall through */ }
   }
 
   // 1b) Firecrawl search — the working fallback when no Serper key is set.
-  if (opts.firecrawlKey) {
+  if (opts.firecrawlKey && (!budget || budget.canSpend("firecrawl_search"))) {
     try {
       const organic = await firecrawlSearch(q, opts.firecrawlKey, num, timeoutMs);
+      await budget?.record("firecrawl", "firecrawl_search", 1, organic.length > 0);
       if (organic.length) return { organic, source: "firecrawl" };
-    } catch { /* fall through */ }
+    } catch (e) {
+      await budget?.record("firecrawl", "firecrawl_search", 1, false, String(e));
+    }
   }
 
   // NOTE: the direct-scrape tiers below are retained as a last resort only.
@@ -737,6 +752,7 @@ async function serperFreeDmHunt(
   location: string | null,
   serperKey: string | null,
   firecrawlKey: string | null = null,
+  budget?: RunBudget,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
   const queries = [
     `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President)`,
@@ -749,7 +765,7 @@ async function serperFreeDmHunt(
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
   for (const q of queries) {
     try {
-      const { organic } = await webSearch(q, { serperKey, firecrawlKey, num: 6 });
+      const { organic } = await webSearch(q, { serperKey, firecrawlKey, num: 6, budget });
       for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         const roleMatch = blob.match(ROLE_RX);
@@ -1111,6 +1127,59 @@ async function logActivity(
   }
 }
 
+// ─── Paid-vendor cost ledger + per-run budget ceiling ────────────────────────
+// Users are billed in our own credits; these rows record what a run actually
+// costs US, so margin is measurable and one run can't drain the API budget.
+// Prices are USD per unit as of 2026-07 — update alongside vendor pricing.
+const UNIT_COST_USD: Record<string, number> = {
+  firecrawl_search: 0.002,
+  firecrawl_scrape: 0.002,
+  serper_search: 0.0003,
+  apollo_enrich: 0.02,
+  seamless_search: 0.02,
+  hunter_find: 0.006,
+  millionverifier_verify: 0.0004,
+};
+
+class RunBudget {
+  spentUsd = 0;
+  constructor(
+    private searchId: string,
+    private teamId: string,
+    readonly ceilingUsd: number,
+  ) {}
+
+  /** True when another paid call of this kind would still fit in budget. */
+  canSpend(operation: string, units = 1): boolean {
+    if (this.ceilingUsd <= 0) return false; // 0 = free sources only
+    const cost = (UNIT_COST_USD[operation] ?? 0) * units;
+    return this.spentUsd + cost <= this.ceilingUsd;
+  }
+
+  /** Record a paid call. Never throws — billing telemetry must not break a run. */
+  async record(provider: string, operation: string, units = 1, ok = true, error?: string) {
+    const unit = UNIT_COST_USD[operation] ?? 0;
+    const cost = unit * units;
+    this.spentUsd += cost;
+    try {
+      await SUPABASE.from("api_cost_events").insert({
+        team_id: this.teamId,
+        search_id: this.searchId,
+        search_kind: "discovery",
+        provider,
+        operation,
+        units,
+        unit_cost_usd: unit,
+        cost_usd: cost,
+        ok,
+        error: error ?? null,
+      });
+    } catch (e) {
+      console.error("cost ledger insert failed", e);
+    }
+  }
+}
+
 function scoreContact(b: Business, verifiedEmail: boolean, patternVerified: boolean, verifiedPhone: boolean): number {
   let s = 0;
   if (verifiedEmail) s += 25;
@@ -1166,6 +1235,14 @@ async function runPipeline(searchId: string) {
   await logActivity(searchId, teamId, "start", "info", "🚀", `Pipeline starting for "${search.keyword}"…`, { percent: 1 });
 
   const { data: settings } = await SUPABASE.from("team_settings").select("*").eq("team_id", teamId).maybeSingle();
+
+  // Ceiling on paid-vendor spend for this run. Free sources (OpenStreetMap,
+  // Google Places on the existing key) are never gated by this.
+  const budget = new RunBudget(
+    searchId,
+    teamId,
+    Number(settings?.max_run_cost_usd ?? 1.0),
+  );
 
   const sources_success: Record<string, boolean> = {};
   const sources_failed: Record<string, string> = {};
@@ -1401,7 +1478,7 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < missing.length; i += BATCH_DM) {
         const slice = missing.slice(i, i + BATCH_DM);
         await Promise.allSettled(slice.map(async (b) => {
-          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm);
+          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
           if (dm) {
             b.contact_name = dm.name;
             b.contact_title = dm.title;
@@ -1873,6 +1950,8 @@ async function runPipeline(searchId: string) {
     await logActivity(searchId, teamId, "finalize", "success", "🎉",
       `Complete! ${merged.length} leads found, ${verifiedEmails + verifiedPhones} verified, ${autoAdded} auto-added to pipeline`,
       { count: merged.length, percent: 100 });
+    // Internal cost telemetry — not surfaced to end users, who see credits only.
+    console.log(`run ${searchId} vendor cost: $${budget.spentUsd.toFixed(4)} of $${budget.ceilingUsd.toFixed(2)} ceiling`);
   } catch (err) {
     console.error("pipeline failed", err);
     const msg = String(err).slice(0, 300);
