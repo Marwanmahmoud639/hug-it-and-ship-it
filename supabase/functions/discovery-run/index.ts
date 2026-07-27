@@ -98,9 +98,10 @@ async function serperStrictMatchUrl(
   fullName: string,
   company: string | undefined,
   city: string | undefined,
+  firecrawlKey: string | null = null,
 ): Promise<string | null> {
   try {
-    const { organic } = await webSearch(query, { serperKey: apiKey, num: 8, timeoutMs: 5000 });
+    const { organic } = await webSearch(query, { serperKey: apiKey, firecrawlKey, num: 8, timeoutMs: 5000 });
     for (const o of organic) {
       if (!o.link) continue;
       try {
@@ -122,12 +123,13 @@ async function enrichSocials(
   company: string | undefined,
   serperKey: string | null | undefined,
   city?: string | undefined,
+  firecrawlKey?: string | null,
 ): Promise<Partial<Record<"facebook_url" | "instagram_url" | "twitter_url" | "youtube_url", string>>> {
   if (!fullName) return {};
   const q = `"${fullName}"${company ? ` "${company}"` : ""}${city ? ` "${city}"` : ""}`;
   const results = await Promise.allSettled(
     SOCIAL_PLATFORMS.map((p) =>
-      serperStrictMatchUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx, fullName, company, city)
+      serperStrictMatchUrl(`site:${p.site} ${q}`, serperKey ?? null, p.hostRx, fullName, company, city, firecrawlKey ?? null)
         .then((url) => ({ key: p.key, url })),
     ),
   );
@@ -590,13 +592,42 @@ async function hunterCombinedFind(email: string, apiKey: string): Promise<{ firs
 
 // ─── FREE decision-maker hunt via Serper (LinkedIn / BiggerPockets / FB / web)
 // ─── Free web search (no API key) ────────────────────────────────────────────
-// Unified search that prefers Serper (if key present), else DuckDuckGo HTML,
-// else scrapes Google SERP directly. Returns a normalized organic array.
+// Unified search: Serper first (if key present), then Firecrawl search, then
+// the legacy direct-scrape tiers. Returns a normalized organic array.
 type WebResult = { title: string; snippet: string; link: string };
+
+// Firecrawl's search endpoint. Unlike raw SERP scraping it runs server-side
+// behind their own anti-bot handling, so it keeps working from datacenter IPs
+// (Supabase Edge Functions) where Google/DDG/Bing/Mojeek all serve challenge
+// pages instead of results.
+async function firecrawlSearch(
+  q: string,
+  apiKey: string,
+  num: number,
+  timeoutMs: number,
+): Promise<WebResult[]> {
+  const res = await fetch("https://api.firecrawl.dev/v1/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ query: q, limit: num }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`firecrawl search ${res.status}`);
+  const data = await res.json();
+  if (!data.success) throw new Error(`firecrawl search: ${data.error || "unknown"}`);
+  // Firecrawl returns title/description either top-level or under metadata
+  // depending on whether the result was scraped; accept both shapes.
+  return ((data.data || []) as any[]).map((item) => ({
+    title: (item.title || item.metadata?.title || "") as string,
+    snippet: (item.description || item.metadata?.description || item.markdown || "") as string,
+    link: (item.url || item.metadata?.sourceURL || "") as string,
+  })).filter((r) => r.link);
+}
+
 async function webSearch(
   q: string,
-  opts: { serperKey?: string | null; num?: number; timeoutMs?: number } = {},
-): Promise<{ organic: WebResult[]; source: "serper" | "duckduckgo" | "google" | "none" }> {
+  opts: { serperKey?: string | null; firecrawlKey?: string | null; num?: number; timeoutMs?: number } = {},
+): Promise<{ organic: WebResult[]; source: "serper" | "firecrawl" | "duckduckgo" | "google" | "none" }> {
   const num = opts.num ?? 8;
   const timeoutMs = opts.timeoutMs ?? 6000;
 
@@ -623,6 +654,19 @@ async function webSearch(
     } catch { /* fall through */ }
   }
 
+  // 1b) Firecrawl search — the working fallback when no Serper key is set.
+  if (opts.firecrawlKey) {
+    try {
+      const organic = await firecrawlSearch(q, opts.firecrawlKey, num, timeoutMs);
+      if (organic.length) return { organic, source: "firecrawl" };
+    } catch { /* fall through */ }
+  }
+
+  // NOTE: the direct-scrape tiers below are retained as a last resort only.
+  // As of 2026-07 they are effectively dead — Google serves an "enablejs"
+  // page, DuckDuckGo returns an anti-bot challenge, Bing a proof-of-work
+  // challenge, and Mojeek a captcha. They are kept because they cost nothing
+  // to attempt, but a Serper or Firecrawl key is required in practice.
   const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
   // 2) DuckDuckGo HTML (free, no key)
@@ -692,6 +736,7 @@ async function serperFreeDmHunt(
   companyName: string,
   location: string | null,
   serperKey: string | null,
+  firecrawlKey: string | null = null,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
   const queries = [
     `site:linkedin.com/in "${companyName}" (CEO OR Owner OR Founder OR President)`,
@@ -704,7 +749,7 @@ async function serperFreeDmHunt(
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
   for (const q of queries) {
     try {
-      const { organic } = await webSearch(q, { serperKey, num: 6 });
+      const { organic } = await webSearch(q, { serperKey, firecrawlKey, num: 6 });
       for (const r of organic) {
         const blob = `${r.title || ""} ${r.snippet || ""}`;
         const roleMatch = blob.match(ROLE_RX);
@@ -789,7 +834,7 @@ async function freeSkiptraceViaWeb(
   for (const q of queries) {
     if (overBudget()) break;
     try {
-      const { organic, source } = await webSearch(q, { serperKey, num: 10, timeoutMs: 5000 });
+      const { organic, source } = await webSearch(q, { serperKey, firecrawlKey, num: 10, timeoutMs: 5000 });
       if (!organic.length) continue;
 
       for (const r of organic) {
@@ -1344,10 +1389,11 @@ async function runPipeline(searchId: string) {
       if (b.contact_name) dmCount++;
     }
 
-    // FREE DM hunt: always runs. Uses Serper if key present, else DuckDuckGo
-    // + Google SERP scraping so we never miss decision makers because a key
-    // isn't set.
+    // DM hunt: always runs. Prefers Serper, then Firecrawl search. The direct
+    // SERP-scrape tiers inside webSearch() no longer return results, so one of
+    // those two keys must be configured for this step to find anything.
     const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
+    const firecrawlKeyForDm = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY") || null;
     let freeDmFound = 0;
     {
       const missing = merged.filter(b => !b.contact_name);
@@ -1355,7 +1401,7 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < missing.length; i += BATCH_DM) {
         const slice = missing.slice(i, i + BATCH_DM);
         await Promise.allSettled(slice.map(async (b) => {
-          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm);
+          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm);
           if (dm) {
             b.contact_name = dm.name;
             b.contact_title = dm.title;
@@ -1382,14 +1428,15 @@ async function runPipeline(searchId: string) {
       const lnk = b.raw?.apollo?.top?.linkedin_url;
       if (lnk) b.linkedin_url ||= lnk;
     }
-    // Socials via web search (Serper if key present, else DuckDuckGo/Google SERP)
+    // Socials via web search (Serper if key present, else Firecrawl search)
     const serperKey = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
+    const firecrawlKeySocial = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY") || null;
     {
       const BATCH = 5;
       for (let i = 0; i < merged.length; i += BATCH) {
         const slice = merged.slice(i, i + BATCH);
         await Promise.allSettled(slice.map(async (b) => {
-          const socials = await enrichSocials(b.contact_name, b.name, serperKey, b.city);
+          const socials = await enrichSocials(b.contact_name, b.name, serperKey, b.city, firecrawlKeySocial);
           if (socials.facebook_url) b.facebook_url ||= socials.facebook_url;
           if (socials.instagram_url) b.instagram_url ||= socials.instagram_url;
           if (socials.twitter_url) b.twitter_url ||= socials.twitter_url;
