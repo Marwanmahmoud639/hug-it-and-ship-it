@@ -30,7 +30,7 @@ export function StickyNav() {
     <>
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-          scrolled ? "bg-black/80 backdrop-blur-xl border-b border-white/5" : "bg-transparent"
+          scrolled ? "r4d-marketing-dark/80 backdrop-blur-xl border-b border-white/5" : "bg-transparent"
         }`}
       >
         <div className={`max-w-7xl mx-auto px-6 flex items-center justify-between transition-all ${scrolled ? "h-14" : "h-20"}`}>
@@ -55,7 +55,7 @@ export function StickyNav() {
             </Link>
             <a
               href="#pricing"
-              className="text-sm font-bold r4d-bg-lime hover:opacity-90 text-black px-4 py-2 rounded-lg inline-flex items-center gap-1.5"
+              className="text-sm font-bold r4d-bg-lime hover:opacity-90 text-primary-foreground px-4 py-2 rounded-lg inline-flex items-center gap-1.5"
             >
               Get Access <ArrowRight className="w-3.5 h-3.5" />
             </a>
@@ -63,7 +63,7 @@ export function StickyNav() {
 
           <button
             onClick={() => setOpen(true)}
-            className="md:hidden w-10 h-10 rounded-lg r4d-bg-lime text-black flex items-center justify-center"
+            className="md:hidden w-10 h-10 rounded-lg r4d-bg-lime text-primary-foreground flex items-center justify-center"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" strokeWidth={2.5} />
@@ -72,7 +72,7 @@ export function StickyNav() {
       </header>
 
       {open && (
-        <div className="fixed inset-0 z-[60] bg-black md:hidden flex flex-col">
+        <div className="fixed inset-0 z-[60] r4d-marketing-dark md:hidden flex flex-col">
           <div className="flex items-center justify-between px-6 h-20">
             <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
               <img src={r4dLogo.url} alt="The engine" className="w-8 h-8 rounded-lg object-contain" />
@@ -101,7 +101,7 @@ export function StickyNav() {
             <a
               href="#pricing"
               onClick={() => setOpen(false)}
-              className="w-full inline-flex items-center justify-center gap-2 r4d-bg-lime text-black font-bold py-4 rounded-xl"
+              className="w-full inline-flex items-center justify-center gap-2 r4d-bg-lime text-primary-foreground font-bold py-4 rounded-xl"
             >
               Get Access <ArrowRight className="w-4 h-4" />
             </a>

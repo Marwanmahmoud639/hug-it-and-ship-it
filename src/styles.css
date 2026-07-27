@@ -241,40 +241,48 @@
   }
 }
 
-/* R4D marketing surface — pure black + lime */
+/* R4D marketing surface — primary theme */
 @layer utilities {
-  .r4d-obsidian { background-color: #000000; color: #F4F4F5; }
-  .r4d-surface { background-color: #0a0a0a; }
-  .r4d-surface-2 { background-color: #111111; }
-  .r4d-lime { color: #C6F432; }
-  .r4d-bg-lime { background-color: #C6F432; }
-  .r4d-glow-lime { box-shadow: 0 0 32px rgba(198, 244, 50, 0.35), 0 0 80px rgba(159, 224, 0, 0.18); }
-  .r4d-glow-lime-sm { box-shadow: 0 0 16px rgba(198, 244, 50, 0.45); }
-  /* Back-compat: keep old emerald class names rendering lime so legacy markup stays consistent */
-  .r4d-emerald { color: #C6F432; }
-  .r4d-teal { color: #9FE000; }
-  .r4d-glow-emerald { box-shadow: 0 0 32px rgba(198, 244, 50, 0.35), 0 0 80px rgba(159, 224, 0, 0.18); }
+  .r4d-obsidian, .r4d-marketing-dark {
+    --background: oklch(0.18 0.04 255);
+    --foreground: oklch(0.98 0.003 250);
+    --card: oklch(0.22 0.04 255);
+    --border: oklch(0.98 0.003 250 / 0.10);
+    --primary: oklch(0.72 0.13 250);
+    --primary-foreground: oklch(0.18 0.04 255);
+    background-color: oklch(0.18 0.04 255);
+    color: oklch(0.98 0.003 250);
+  }
+  .r4d-surface { background-color: var(--card); }
+  .r4d-surface-2 { background-color: var(--muted); }
+  .r4d-lime { color: var(--primary); }
+  .r4d-bg-lime { background-color: var(--primary); color: var(--primary-foreground); }
+  .r4d-glow-lime { box-shadow: 0 0 32px color-mix(in oklab, var(--primary) calc(0.35 * 100%), transparent), 0 0 80px color-mix(in oklab, var(--primary) calc(0.18 * 100%), transparent); }
+  .r4d-glow-lime-sm { box-shadow: 0 0 16px color-mix(in oklab, var(--primary) calc(0.45 * 100%), transparent); }
+  .r4d-emerald { color: var(--primary); }
+  .r4d-teal { color: color-mix(in oklab, var(--primary) calc(0.8 * 100%), transparent); }
+  .r4d-glow-emerald { box-shadow: 0 0 32px color-mix(in oklab, var(--primary) calc(0.35 * 100%), transparent), 0 0 80px color-mix(in oklab, var(--primary) calc(0.18 * 100%), transparent); }
   .r4d-text-gradient {
-    background: linear-gradient(135deg, #C6F432 0%, #9FE000 60%, #74B300 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, color-mix(in oklab, var(--primary) calc(0.75 * 100%), transparent) 60%, color-mix(in oklab, var(--primary) calc(0.55 * 100%), transparent) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   .r4d-glass {
-    background: rgba(12, 12, 12, 0.72);
+    background: color-mix(in oklab, var(--card) calc(0.72 * 100%), transparent);
     backdrop-filter: blur(22px) saturate(140%);
     -webkit-backdrop-filter: blur(22px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid color-mix(in oklab, var(--border) calc(0.6 * 100%), transparent);
   }
   .r4d-glass-lime {
-    background: linear-gradient(180deg, rgba(198,244,50,0.10) 0%, rgba(198,244,50,0.02) 100%);
-    border: 1px solid rgba(198, 244, 50, 0.25);
+    background: linear-gradient(180deg, color-mix(in oklab, var(--primary) calc(0.10 * 100%), transparent) 0%, color-mix(in oklab, var(--primary) calc(0.02 * 100%), transparent) 100%);
+    border: 1px solid color-mix(in oklab, var(--primary) calc(0.25 * 100%), transparent);
   }
   .r4d-grid-bg {
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(198, 244, 50, 0.18) 0%, transparent 60%),
-      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      radial-gradient(ellipse 80% 60% at 50% -10%, color-mix(in oklab, var(--primary) calc(0.18 * 100%), transparent) 0%, transparent 60%),
+      linear-gradient(color-mix(in oklab, var(--foreground) calc(0.04 * 100%), transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--foreground) calc(0.04 * 100%), transparent) 1px, transparent 1px);
     background-size: 100% 100%, 56px 56px, 56px 56px;
   }
   .r4d-noise {
@@ -286,7 +294,7 @@
   }
   .r4d-ring-focus:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #000000, 0 0 0 4px #C6F432, 0 0 24px rgba(198,244,50,0.5);
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--primary), 0 0 24px color-mix(in oklab, var(--primary) calc(0.5 * 100%), transparent);
   }
   @keyframes r4dPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
   @keyframes r4dDash { to { stroke-dashoffset: -200; } }
@@ -295,6 +303,7 @@
   .r4d-dash { stroke-dasharray: 6 8; animation: r4dDash 12s linear infinite; }
   .r4d-float { animation: r4dFloat 4s ease-in-out infinite; }
 }
+
 
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(8px); }

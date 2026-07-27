@@ -27,7 +27,7 @@ export function AccessTracker() {
         <div className="grid grid-cols-4 gap-6 relative">
           {STEPS.map((s) => (
             <div key={s.n} className="flex flex-col items-center text-center px-2">
-              <div className="w-12 h-12 rounded-full r4d-bg-lime text-black font-black text-lg flex items-center justify-center r4d-glow-lime-sm relative z-10 mb-4">
+              <div className="w-12 h-12 rounded-full r4d-bg-lime text-primary-foreground font-black text-lg flex items-center justify-center r4d-glow-lime-sm relative z-10 mb-4">
                 {s.n}
               </div>
               <h4 className="font-bold text-white mb-1">{s.title}</h4>
@@ -47,7 +47,7 @@ export function AccessTracker() {
         <ol className="space-y-8">
           {STEPS.map((s) => (
             <li key={s.n} className="relative">
-              <span className="absolute -left-14 w-12 h-12 rounded-full r4d-bg-lime text-black font-black flex items-center justify-center">
+              <span className="absolute -left-14 w-12 h-12 rounded-full r4d-bg-lime text-primary-foreground font-black flex items-center justify-center">
                 {s.n}
               </span>
               <h4 className="font-bold text-white mb-1">{s.title}</h4>
