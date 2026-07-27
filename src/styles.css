@@ -241,40 +241,39 @@
   }
 }
 
-/* R4D marketing surface — pure black + lime */
+/* R4D marketing surface — primary theme */
 @layer utilities {
-  .r4d-obsidian { background-color: #000000; color: #F4F4F5; }
-  .r4d-surface { background-color: #0a0a0a; }
-  .r4d-surface-2 { background-color: #111111; }
-  .r4d-lime { color: #C6F432; }
-  .r4d-bg-lime { background-color: #C6F432; }
-  .r4d-glow-lime { box-shadow: 0 0 32px rgba(198, 244, 50, 0.35), 0 0 80px rgba(159, 224, 0, 0.18); }
-  .r4d-glow-lime-sm { box-shadow: 0 0 16px rgba(198, 244, 50, 0.45); }
-  /* Back-compat: keep old emerald class names rendering lime so legacy markup stays consistent */
-  .r4d-emerald { color: #C6F432; }
-  .r4d-teal { color: #9FE000; }
-  .r4d-glow-emerald { box-shadow: 0 0 32px rgba(198, 244, 50, 0.35), 0 0 80px rgba(159, 224, 0, 0.18); }
+  .r4d-obsidian { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
+  .r4d-surface { background-color: hsl(var(--card)); }
+  .r4d-surface-2 { background-color: hsl(var(--muted)); }
+  .r4d-lime { color: hsl(var(--primary)); }
+  .r4d-bg-lime { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .r4d-glow-lime { box-shadow: 0 0 32px hsl(var(--primary) / 0.35), 0 0 80px hsl(var(--primary) / 0.18); }
+  .r4d-glow-lime-sm { box-shadow: 0 0 16px hsl(var(--primary) / 0.45); }
+  .r4d-emerald { color: hsl(var(--primary)); }
+  .r4d-teal { color: hsl(var(--primary) / 0.8); }
+  .r4d-glow-emerald { box-shadow: 0 0 32px hsl(var(--primary) / 0.35), 0 0 80px hsl(var(--primary) / 0.18); }
   .r4d-text-gradient {
-    background: linear-gradient(135deg, #C6F432 0%, #9FE000 60%, #74B300 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.75) 60%, hsl(var(--primary) / 0.55) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   .r4d-glass {
-    background: rgba(12, 12, 12, 0.72);
+    background: hsl(var(--card) / 0.72);
     backdrop-filter: blur(22px) saturate(140%);
     -webkit-backdrop-filter: blur(22px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid hsl(var(--border) / 0.6);
   }
   .r4d-glass-lime {
-    background: linear-gradient(180deg, rgba(198,244,50,0.10) 0%, rgba(198,244,50,0.02) 100%);
-    border: 1px solid rgba(198, 244, 50, 0.25);
+    background: linear-gradient(180deg, hsl(var(--primary) / 0.10) 0%, hsl(var(--primary) / 0.02) 100%);
+    border: 1px solid hsl(var(--primary) / 0.25);
   }
   .r4d-grid-bg {
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(198, 244, 50, 0.18) 0%, transparent 60%),
-      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      radial-gradient(ellipse 80% 60% at 50% -10%, hsl(var(--primary) / 0.18) 0%, transparent 60%),
+      linear-gradient(hsl(var(--foreground) / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
     background-size: 100% 100%, 56px 56px, 56px 56px;
   }
   .r4d-noise {
@@ -286,7 +285,7 @@
   }
   .r4d-ring-focus:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #000000, 0 0 0 4px #C6F432, 0 0 24px rgba(198,244,50,0.5);
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary)), 0 0 24px hsl(var(--primary) / 0.5);
   }
   @keyframes r4dPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
   @keyframes r4dDash { to { stroke-dashoffset: -200; } }
@@ -295,6 +294,7 @@
   .r4d-dash { stroke-dasharray: 6 8; animation: r4dDash 12s linear infinite; }
   .r4d-float { animation: r4dFloat 4s ease-in-out infinite; }
 }
+
 
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(8px); }
