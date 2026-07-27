@@ -16,9 +16,9 @@ import { EmptyState } from "@/components/app-shell/ui-bits";
 import { ResultsMap } from "@/components/discovery/ResultsMap";
 import { ProgressActivityLog } from "@/components/discovery/ProgressActivityLog";
 import { KeywordAutocomplete } from "@/components/discovery/KeywordAutocomplete";
-import { LocationAutocomplete } from "@/components/discovery/LocationAutocomplete";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
+import { US_STATES, formatUsDiscoveryLocation } from "@/lib/us-locations";
 import { toast } from "sonner";
 import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban, Search as SearchIcon, UserSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -74,7 +74,9 @@ function DiscoveryPage() {
   const teamNicheRaw = (team as any)?.default_industry as string | undefined;
   const teamNiches = (teamNicheRaw || "").split(",").map((s) => s.trim()).filter(Boolean);
   const [keyword, setKeyword] = useState("");
-  const [location, setLocation] = useState("");
+  const [city, setCity] = useState("");
+  const [stateCode, setStateCode] = useState("");
+  const [zip, setZip] = useState("");
   const [industry, setIndustry] = useState<string>(teamNiches[0] || "");
   const [titles, setTitles] = useState<string[]>(TITLES);
   useEffect(() => { if (teamNiches[0] && !industry) setIndustry(teamNiches[0]); }, [teamNicheRaw]);
@@ -83,7 +85,14 @@ function DiscoveryPage() {
   const prevStatusRef = useRef<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => start({ data: { keyword, location, industry: industry || null, titles } }),
+    mutationFn: () => start({
+      data: {
+        keyword,
+        location: formatUsDiscoveryLocation(city, stateCode, zip),
+        industry: industry || null,
+        titles,
+      },
+    }),
     onSuccess: (res) => {
       setActiveSearchId(res.searchId);
       toast.success("Discovery started");
@@ -265,13 +274,39 @@ function DiscoveryPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Location</Label>
-            <LocationAutocomplete
-              value={location}
-              onChange={setLocation}
-              placeholder="Austin, TX  or  New York, NY  or  Florida"
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">United States location</Label>
+              <Badge variant="outline" className="text-[10px]">US only</Badge>
+            </div>
+            <Input
+              value={city}
+              onChange={(event) => setCity(event.target.value)}
+              placeholder="City, county, or metro"
+              className="h-10"
             />
+            <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-2">
+              <Select value={stateCode || undefined} onValueChange={setStateCode}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Pick any state" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {US_STATES.map((state) => (
+                    <SelectItem key={state.code} value={state.code}>{state.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                value={zip}
+                onChange={(event) => setZip(event.target.value.replace(/[^0-9-]/g, "").slice(0, 10))}
+                placeholder="ZIP"
+                className="h-10"
+                inputMode="numeric"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              State coverage includes all 50 states plus DC; city is free-text so every US city, county, and metro can run.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -321,7 +356,7 @@ function DiscoveryPage() {
 
           <Button
             className="w-full h-12 text-sm shadow-primary-glow"
-            disabled={!keyword || mutation.isPending}
+            disabled={!keyword || !stateCode || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
             {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
