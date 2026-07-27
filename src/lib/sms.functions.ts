@@ -96,6 +96,9 @@ export const sendSms = createServerFn({ method: "POST" })
     if (te) throw new Error(te.message);
     if (!thread) throw new Error("Thread not found");
 
+    const { assertEntitled } = await import("@/lib/entitlements.server");
+    await assertEntitled(thread.team_id, "sms");
+
     const { data: quota } = await supabase.rpc("consume_trial_quota" as never, {
       _team_id: thread.team_id, _kind: "message", _amount: 1,
     } as never);

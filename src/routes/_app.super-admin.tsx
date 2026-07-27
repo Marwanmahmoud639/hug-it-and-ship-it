@@ -18,6 +18,7 @@ import { listManagedUsers, inviteUserWithMarket, listAllUsersForAdmin, listAllTe
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, Users } from "lucide-react";
+import { AccountProvisioningCard, BillingRateCard } from "@/components/settings/account-provisioning-card";
 
 export const Route = createFileRoute("/_app/super-admin")({ component: SuperAdminPage });
 
@@ -213,6 +214,8 @@ function SuperAdminPage() {
       </Card>
 
       <UserManagementCard />
+      <AccountProvisioningCard />
+      <BillingRateCard />
       <AssignUsersCard />
       <TeamLimitsCard />
       <SubdomainApprovalsCard />

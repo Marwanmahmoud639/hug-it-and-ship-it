@@ -20,6 +20,7 @@ const PAID_KEYS: KeyField[] = [
   { field: "trestle_api_key", label: "Trestle API Key", placeholder: "Trestle API key", help: "Optional. Free reverse people-search (TruePeopleSearch / ThatsThem / CyberBackgroundChecks) runs first." },
   { field: "firecrawl_api_key", label: "Firecrawl API Key", placeholder: "Firecrawl API key", help: "Powers all free web scraping (company sites, social, reverse people-search)." },
   { field: "serper_api_key", label: "Serper API Key", placeholder: "Serper API key", help: "Google search for free decision-maker discovery (LinkedIn / Facebook / BBB)." },
+  { field: "millionverifier_api_key", label: "MillionVerifier API Key", placeholder: "MillionVerifier API key", help: "Mailbox-level email verification (~$0.0004/check). Without it, guessed addresses ship unverified and may bounce." },
 ];
 
 function KeyRow({ k, value, onSave }: { k: KeyField; value: string; onSave: (v: string | null) => void }) {

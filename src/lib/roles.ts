@@ -49,7 +49,8 @@ export function can(role: Role | null | undefined, cap: Capability): boolean {
 export type SectionKey =
   | "dashboard" | "pipeline" | "inbox" | "contacts" | "discovery" | "areas"
   | "campaigns" | "workflows" | "automations" | "proposals" | "monitors"
-  | "portals" | "analytics" | "team" | "settings" | "ai_caller";
+  | "portals" | "analytics" | "team" | "settings" | "ai_caller"
+  | "intelligence" | "knowledge_base";
 
 export const SECTION_CATALOG: { key: SectionKey; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
@@ -65,6 +66,8 @@ export const SECTION_CATALOG: { key: SectionKey; label: string }[] = [
   { key: "monitors", label: "Monitors" },
   { key: "portals", label: "Portals" },
   { key: "ai_caller", label: "AI Caller" },
+  { key: "intelligence", label: "Intelligence" },
+  { key: "knowledge_base", label: "Knowledge Base" },
   { key: "analytics", label: "Analytics" },
   { key: "team", label: "Team" },
   { key: "settings", label: "Settings" },
@@ -77,9 +80,11 @@ const ROLE_DEFAULT_SECTIONS: Record<Role, SectionKey[]> = {
   manager: [
     "dashboard", "pipeline", "inbox", "contacts", "discovery", "areas",
     "campaigns", "workflows", "automations", "proposals", "monitors",
-    "portals", "ai_caller", "analytics",
+    "portals", "ai_caller", "intelligence", "knowledge_base", "analytics",
   ],
-  agent: ["dashboard", "pipeline", "inbox", "contacts", "areas", "ai_caller"],
+  // Reps get the Knowledge Base (scripts and templates they send) but not
+  // Intelligence, which exposes team-wide performance numbers.
+  agent: ["dashboard", "pipeline", "inbox", "contacts", "areas", "ai_caller", "knowledge_base"],
 };
 
 export function resolveSections(

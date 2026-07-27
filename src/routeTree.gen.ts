@@ -36,6 +36,8 @@ import { Route as AppProposalsRouteImport } from './routes/_app.proposals'
 import { Route as AppPortalsRouteImport } from './routes/_app.portals'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppMonitorsRouteImport } from './routes/_app.monitors'
+import { Route as AppKnowledgeBaseRouteImport } from './routes/_app.knowledge-base'
+import { Route as AppIntelligenceRouteImport } from './routes/_app.intelligence'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppDiscoveryRouteImport } from './routes/_app.discovery'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -54,10 +56,12 @@ import { Route as AppReviewIdRouteImport } from './routes/_app.review.$id'
 import { Route as AppContactsIdRouteImport } from './routes/_app.contacts.$id'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiSocialCallbackPlatformRouteImport } from './routes/api/social.callback.$platform'
 import { Route as ApiPublicWebhooksWhopRouteImport } from './routes/api/public/webhooks/whop'
 import { Route as ApiPublicWebhooksInboundSmsRouteImport } from './routes/api/public/webhooks/inbound-sms'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
 import { Route as ApiPublicTwilioSmsInboundRouteImport } from './routes/api/public/twilio/sms-inbound'
+import { Route as ApiPublicTwilioAiStreamRouteImport } from './routes/api/public/twilio/ai-stream'
 import { Route as ApiPublicHooksWarmupTickRouteImport } from './routes/api/public/hooks/warmup-tick'
 import { Route as ApiPublicHooksRunWorkflowJobsRouteImport } from './routes/api/public/hooks/run-workflow-jobs'
 import { Route as ApiPublicHooksRunTaskRemindersRouteImport } from './routes/api/public/hooks/run-task-reminders'
@@ -202,6 +206,16 @@ const AppMonitorsRoute = AppMonitorsRouteImport.update({
   path: '/monitors',
   getParentRoute: () => AppRoute,
 } as any)
+const AppKnowledgeBaseRoute = AppKnowledgeBaseRouteImport.update({
+  id: '/knowledge-base',
+  path: '/knowledge-base',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntelligenceRoute = AppIntelligenceRouteImport.update({
+  id: '/intelligence',
+  path: '/intelligence',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInboxRoute = AppInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -292,6 +306,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSocialCallbackPlatformRoute =
+  ApiSocialCallbackPlatformRouteImport.update({
+    id: '/api/social/callback/$platform',
+    path: '/api/social/callback/$platform',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksWhopRoute = ApiPublicWebhooksWhopRouteImport.update({
   id: '/api/public/webhooks/whop',
   path: '/api/public/webhooks/whop',
@@ -314,6 +334,11 @@ const ApiPublicTwilioSmsInboundRoute =
     path: '/api/public/twilio/sms-inbound',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTwilioAiStreamRoute = ApiPublicTwilioAiStreamRouteImport.update({
+  id: '/api/public/twilio/ai-stream',
+  path: '/api/public/twilio/ai-stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksWarmupTickRoute =
   ApiPublicHooksWarmupTickRouteImport.update({
     id: '/api/public/hooks/warmup-tick',
@@ -395,6 +420,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/discovery': typeof AppDiscoveryRoute
   '/inbox': typeof AppInboxRoute
+  '/intelligence': typeof AppIntelligenceRoute
+  '/knowledge-base': typeof AppKnowledgeBaseRoute
   '/monitors': typeof AppMonitorsRoute
   '/pipeline': typeof AppPipelineRoute
   '/portals': typeof AppPortalsRoute
@@ -425,10 +452,12 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
   '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
   '/api/public/hooks/warmup-tick': typeof ApiPublicHooksWarmupTickRoute
+  '/api/public/twilio/ai-stream': typeof ApiPublicTwilioAiStreamRoute
   '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
   '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/api/social/callback/$platform': typeof ApiSocialCallbackPlatformRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
@@ -454,6 +483,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/discovery': typeof AppDiscoveryRoute
   '/inbox': typeof AppInboxRoute
+  '/intelligence': typeof AppIntelligenceRoute
+  '/knowledge-base': typeof AppKnowledgeBaseRoute
   '/monitors': typeof AppMonitorsRoute
   '/pipeline': typeof AppPipelineRoute
   '/portals': typeof AppPortalsRoute
@@ -484,10 +515,12 @@ export interface FileRoutesByTo {
   '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
   '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
   '/api/public/hooks/warmup-tick': typeof ApiPublicHooksWarmupTickRoute
+  '/api/public/twilio/ai-stream': typeof ApiPublicTwilioAiStreamRoute
   '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
   '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/api/social/callback/$platform': typeof ApiSocialCallbackPlatformRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
@@ -516,6 +549,8 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/discovery': typeof AppDiscoveryRoute
   '/_app/inbox': typeof AppInboxRoute
+  '/_app/intelligence': typeof AppIntelligenceRoute
+  '/_app/knowledge-base': typeof AppKnowledgeBaseRoute
   '/_app/monitors': typeof AppMonitorsRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/portals': typeof AppPortalsRoute
@@ -546,10 +581,12 @@ export interface FileRoutesById {
   '/api/public/hooks/run-task-reminders': typeof ApiPublicHooksRunTaskRemindersRoute
   '/api/public/hooks/run-workflow-jobs': typeof ApiPublicHooksRunWorkflowJobsRoute
   '/api/public/hooks/warmup-tick': typeof ApiPublicHooksWarmupTickRoute
+  '/api/public/twilio/ai-stream': typeof ApiPublicTwilioAiStreamRoute
   '/api/public/twilio/sms-inbound': typeof ApiPublicTwilioSmsInboundRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/inbound-sms': typeof ApiPublicWebhooksInboundSmsRoute
   '/api/public/webhooks/whop': typeof ApiPublicWebhooksWhopRoute
+  '/api/social/callback/$platform': typeof ApiSocialCallbackPlatformRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/api/public/dialer/sms-inbound/$provider': typeof ApiPublicDialerSmsInboundProviderRoute
@@ -577,6 +614,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/discovery'
     | '/inbox'
+    | '/intelligence'
+    | '/knowledge-base'
     | '/monitors'
     | '/pipeline'
     | '/portals'
@@ -607,10 +646,12 @@ export interface FileRouteTypes {
     | '/api/public/hooks/run-task-reminders'
     | '/api/public/hooks/run-workflow-jobs'
     | '/api/public/hooks/warmup-tick'
+    | '/api/public/twilio/ai-stream'
     | '/api/public/twilio/sms-inbound'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
     | '/api/public/webhooks/whop'
+    | '/api/social/callback/$platform'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/api/public/dialer/sms-inbound/$provider'
@@ -636,6 +677,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/discovery'
     | '/inbox'
+    | '/intelligence'
+    | '/knowledge-base'
     | '/monitors'
     | '/pipeline'
     | '/portals'
@@ -666,10 +709,12 @@ export interface FileRouteTypes {
     | '/api/public/hooks/run-task-reminders'
     | '/api/public/hooks/run-workflow-jobs'
     | '/api/public/hooks/warmup-tick'
+    | '/api/public/twilio/ai-stream'
     | '/api/public/twilio/sms-inbound'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
     | '/api/public/webhooks/whop'
+    | '/api/social/callback/$platform'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/api/public/dialer/sms-inbound/$provider'
@@ -697,6 +742,8 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/discovery'
     | '/_app/inbox'
+    | '/_app/intelligence'
+    | '/_app/knowledge-base'
     | '/_app/monitors'
     | '/_app/pipeline'
     | '/_app/portals'
@@ -727,10 +774,12 @@ export interface FileRouteTypes {
     | '/api/public/hooks/run-task-reminders'
     | '/api/public/hooks/run-workflow-jobs'
     | '/api/public/hooks/warmup-tick'
+    | '/api/public/twilio/ai-stream'
     | '/api/public/twilio/sms-inbound'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/inbound-sms'
     | '/api/public/webhooks/whop'
+    | '/api/social/callback/$platform'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/api/public/dialer/sms-inbound/$provider'
@@ -764,10 +813,12 @@ export interface RootRouteChildren {
   ApiPublicHooksRunTaskRemindersRoute: typeof ApiPublicHooksRunTaskRemindersRoute
   ApiPublicHooksRunWorkflowJobsRoute: typeof ApiPublicHooksRunWorkflowJobsRoute
   ApiPublicHooksWarmupTickRoute: typeof ApiPublicHooksWarmupTickRoute
+  ApiPublicTwilioAiStreamRoute: typeof ApiPublicTwilioAiStreamRoute
   ApiPublicTwilioSmsInboundRoute: typeof ApiPublicTwilioSmsInboundRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicWebhooksInboundSmsRoute: typeof ApiPublicWebhooksInboundSmsRoute
   ApiPublicWebhooksWhopRoute: typeof ApiPublicWebhooksWhopRoute
+  ApiSocialCallbackPlatformRoute: typeof ApiSocialCallbackPlatformRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   ApiPublicDialerSmsInboundProviderRoute: typeof ApiPublicDialerSmsInboundProviderRoute
@@ -964,6 +1015,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMonitorsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/knowledge-base': {
+      id: '/_app/knowledge-base'
+      path: '/knowledge-base'
+      fullPath: '/knowledge-base'
+      preLoaderRoute: typeof AppKnowledgeBaseRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/intelligence': {
+      id: '/_app/intelligence'
+      path: '/intelligence'
+      fullPath: '/intelligence'
+      preLoaderRoute: typeof AppIntelligenceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/inbox': {
       id: '/_app/inbox'
       path: '/inbox'
@@ -1090,6 +1155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social/callback/$platform': {
+      id: '/api/social/callback/$platform'
+      path: '/api/social/callback/$platform'
+      fullPath: '/api/social/callback/$platform'
+      preLoaderRoute: typeof ApiSocialCallbackPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/whop': {
       id: '/api/public/webhooks/whop'
       path: '/api/public/webhooks/whop'
@@ -1116,6 +1188,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/twilio/sms-inbound'
       fullPath: '/api/public/twilio/sms-inbound'
       preLoaderRoute: typeof ApiPublicTwilioSmsInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/ai-stream': {
+      id: '/api/public/twilio/ai-stream'
+      path: '/api/public/twilio/ai-stream'
+      fullPath: '/api/public/twilio/ai-stream'
+      preLoaderRoute: typeof ApiPublicTwilioAiStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/warmup-tick': {
@@ -1240,6 +1319,8 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiscoveryRoute: typeof AppDiscoveryRoute
   AppInboxRoute: typeof AppInboxRoute
+  AppIntelligenceRoute: typeof AppIntelligenceRoute
+  AppKnowledgeBaseRoute: typeof AppKnowledgeBaseRoute
   AppMonitorsRoute: typeof AppMonitorsRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppPortalsRoute: typeof AppPortalsRoute
@@ -1263,6 +1344,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDiscoveryRoute: AppDiscoveryRoute,
   AppInboxRoute: AppInboxRoute,
+  AppIntelligenceRoute: AppIntelligenceRoute,
+  AppKnowledgeBaseRoute: AppKnowledgeBaseRoute,
   AppMonitorsRoute: AppMonitorsRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppPortalsRoute: AppPortalsRoute,
@@ -1316,10 +1399,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksRunTaskRemindersRoute: ApiPublicHooksRunTaskRemindersRoute,
   ApiPublicHooksRunWorkflowJobsRoute: ApiPublicHooksRunWorkflowJobsRoute,
   ApiPublicHooksWarmupTickRoute: ApiPublicHooksWarmupTickRoute,
+  ApiPublicTwilioAiStreamRoute: ApiPublicTwilioAiStreamRoute,
   ApiPublicTwilioSmsInboundRoute: ApiPublicTwilioSmsInboundRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicWebhooksInboundSmsRoute: ApiPublicWebhooksInboundSmsRoute,
   ApiPublicWebhooksWhopRoute: ApiPublicWebhooksWhopRoute,
+  ApiSocialCallbackPlatformRoute: ApiSocialCallbackPlatformRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   ApiPublicDialerSmsInboundProviderRoute:
@@ -1328,13 +1413,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

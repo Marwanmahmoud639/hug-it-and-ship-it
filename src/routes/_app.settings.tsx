@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Mail, MessageSquare, Globe, Share2, Sparkles, Bell, Kanban, User, Rocket, Shield, Server, Phone, Flame } from "lucide-react";
+import { CheckCircle2, Circle, Mail, MessageSquare, Globe, Share2, Sparkles, Bell, Kanban, User, Rocket, Shield, Server, Phone, Flame, Palette as PaletteIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IS_AGENCY } from "@/lib/brand";
 import { CompliancePanel, EmailInfraPanel } from "@/components/settings/compliance-panels";
@@ -22,6 +22,8 @@ import { SubdomainRequestPanel } from "@/components/settings/subdomain-request-p
 import { AccountProfile } from "@/components/settings/account-profile";
 import { AutomationApisPanel } from "@/components/settings/automation-apis-panel";
 import { ApiKeysPanel } from "@/components/settings/api-keys-panel";
+import { SocialConnectionsPanel } from "@/components/settings/social-connections-panel";
+import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { DialerProvidersPanel } from "@/components/settings/dialer-providers-panel";
 
 import { ApiCreditsPanel } from "@/components/settings/api-credits-panel";
@@ -121,6 +123,7 @@ function Settings() {
           <TabTrig value="warmup" Icon={Flame}>Email Warmup</TabTrig>
           {isSuperAdmin && <TabTrig value="compliance" Icon={Shield}>Compliance</TabTrig>}
           {isSuperAdmin && <TabTrig value="email-infra" Icon={Server}>Email Infra</TabTrig>}
+          <TabTrig value="appearance" Icon={PaletteIcon}>Appearance</TabTrig>
           <TabTrig value="account" Icon={User}>Account</TabTrig>
           {(team?.plan === "agency" || team?.parent_team_id) && <TabTrig value="white-label" Icon={Sparkles}>White Label</TabTrig>}
         </TabsList>
@@ -290,8 +293,15 @@ function Settings() {
           </Card>
         </TabsContent>}
 
-        {canManageApiKeys && <TabsContent value="social" className="mt-4">
+        {canManageApiKeys && <TabsContent value="social" className="mt-4 space-y-4">
+          <SocialConnectionsPanel />
           <Card className="p-6 bg-card space-y-5">
+            <div className="text-xs text-amber-500/90 bg-amber-500/10 rounded-lg p-3">
+              <strong>Legacy — not recommended.</strong> Pasting a session cookie makes requests
+              look like an automated login replay, which is against LinkedIn's User Agreement and is
+              a common cause of permanent account restrictions. Prefer the OAuth connection above,
+              which LinkedIn sanctions for posting on your behalf.
+            </div>
             <div>
               <h3 className="font-semibold text-sm mb-3">LinkedIn</h3>
               <div className="space-y-3">
@@ -327,6 +337,10 @@ function Settings() {
             </div>
           </Card>
         </TabsContent>}
+
+        <TabsContent value="appearance" className="mt-4">
+          <AppearancePanel />
+        </TabsContent>
 
         <TabsContent value="automation-apis" className="mt-4 space-y-4">
           <ApiKeysPanel settings={settings} save={save} />
