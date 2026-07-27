@@ -753,6 +753,7 @@ async function serperFreeDmHunt(
   serperKey: string | null,
   firecrawlKey: string | null = null,
   budget?: RunBudget,
+  deadlineMs?: number,
 ): Promise<{ name: string; title: string; source: string; linkedin_url?: string } | null> {
   const loc = location || "USA";
   const stateToken = loc.split(",").map((part) => part.trim()).find((part) => /^[A-Z]{2}$/.test(part)) || "";
@@ -769,41 +770,63 @@ async function serperFreeDmHunt(
     { source: "wide_web", q: `${companyName} ${loc} owner founder CEO president` },
   ];
   const ROLE_RX = /\b(CEO|Owner|Founder|Co[- ]?Founder|President|Principal|Managing\s+Partner|Chief\s+\w+|Director)\b/i;
-  for (const item of queries) {
-    try {
-      // item.q + the wider result count come from the improved query set;
-      // firecrawlKey and budget are what actually give webSearch a working
-      // backend and keep the ten-query sweep inside the run's spend ceiling.
-      const { organic } = await webSearch(item.q, {
-        serperKey, firecrawlKey, num: 8, timeoutMs: 5500, budget,
-      });
-      for (const r of organic) {
-        const blob = `${r.title || ""} ${r.snippet || ""} ${r.link || ""}`;
-        const roleMatch = blob.match(ROLE_RX);
-        if (!roleMatch) continue;
-        const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
-        const candidateName = titleParts.find((part) => {
-          const words = part.trim().split(/\s+/);
-          return words.length >= 2 && words.length <= 5 && /^[A-Z][a-zA-Z'\-.]+(?:\s+[A-Z][a-zA-Z'\-.]+)+$/.test(part);
-        }) || "";
-        const words = candidateName.trim().split(/\s+/);
-        if (words.length < 2 || words.length > 5) continue;
-        if (candidateName.length < 4 || candidateName.length > 60) continue;
-        if (/^[\d\W]+$/.test(candidateName)) continue;
-        if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue;
-        if (!strictIdentityMatch(blob, candidateName, companyName, loc.split(",")[0]?.trim())) continue;
-        const source = (r.link || "").includes("linkedin.com") ? "linkedin"
-          : (r.link || "").includes("biggerpockets.com") ? "biggerpockets"
-          : (r.link || "").includes("facebook.com") ? "facebook"
-          : item.source;
-        return {
-          name: candidateName,
-          title: roleMatch[0],
-          source,
-          linkedin_url: source === "linkedin" ? r.link : undefined,
-        };
-      }
-    } catch { /* try next query */ }
+
+  /** Pull a person out of one result set, or null if nothing qualifies. */
+  const extract = (
+    organic: WebResult[],
+    fallbackSource: string,
+  ): { name: string; title: string; source: string; linkedin_url?: string } | null => {
+    for (const r of organic) {
+      const blob = `${r.title || ""} ${r.snippet || ""} ${r.link || ""}`;
+      const roleMatch = blob.match(ROLE_RX);
+      if (!roleMatch) continue;
+      const titleParts = (r.title || "").split(/[-–—|·]/).map((s: string) => s.trim()).filter(Boolean);
+      const candidateName = titleParts.find((part) => {
+        const words = part.trim().split(/\s+/);
+        return words.length >= 2 && words.length <= 5 && /^[A-Z][a-zA-Z'\-.]+(?:\s+[A-Z][a-zA-Z'\-.]+)+$/.test(part);
+      }) || "";
+      const words = candidateName.trim().split(/\s+/);
+      if (words.length < 2 || words.length > 5) continue;
+      if (candidateName.length < 4 || candidateName.length > 60) continue;
+      if (/^[\d\W]+$/.test(candidateName)) continue;
+      if (/^(the|a|an|in|at|of|for|with|by|from|and|or)$/i.test(words[0])) continue;
+      if (!strictIdentityMatch(blob, candidateName, companyName, loc.split(",")[0]?.trim())) continue;
+      const source = (r.link || "").includes("linkedin.com") ? "linkedin"
+        : (r.link || "").includes("facebook.com") ? "facebook"
+        : fallbackSource;
+      return {
+        name: candidateName,
+        title: roleMatch[0],
+        source,
+        linkedin_url: source === "linkedin" ? r.link : undefined,
+      };
+    }
+    return null;
+  };
+
+  // Run the queries in small parallel waves rather than one at a time. Ten
+  // sequential lookups is ~55s per business, which is what pushed the whole
+  // step past the edge function's wall clock. Waves keep the query priority
+  // order intact — earlier entries are higher-signal — while cutting the time
+  // to first answer roughly threefold, and most businesses resolve on wave one.
+  const WAVE = 3;
+  for (let i = 0; i < queries.length; i += WAVE) {
+    if (deadlineMs && Date.now() > deadlineMs) return null;
+    // Once the spend ceiling is reached further lookups can only return
+    // nothing, so stop instead of iterating pointlessly.
+    if (budget && !budget.canSpend("firecrawl_search", WAVE)) return null;
+
+    const wave = queries.slice(i, i + WAVE);
+    const settled = await Promise.allSettled(
+      wave.map((item) =>
+        webSearch(item.q, { serperKey, firecrawlKey, num: 8, timeoutMs: 5500, budget })
+          .then(({ organic }) => extract(organic, item.source)),
+      ),
+    );
+    // Take the earliest hit within the wave so query priority still decides.
+    for (const s of settled) {
+      if (s.status === "fulfilled" && s.value) return s.value;
+    }
   }
   return null;
 }
@@ -1306,7 +1329,7 @@ async function runPipeline(searchId: string) {
     // ── STEP 1: business discovery (parallel, US-only) ─────────────────────
     await setStepRunning(searchId, teamId, "business", `Scraping ${country} directories`);
     await logActivity(searchId, teamId, "business", "running", "🌎",
-      `Scraping Google Maps, Reddit, Yelp, Yellow Pages, Angi, BBB, BiggerPockets, Craigslist (${country})…`,
+      `Searching business directories across ${country}…`,
       { percent: 10 });
 
     const isRealEstate = /cash buyer|wholesale|investor|investment|property|real estate/i.test(keyword);
@@ -1516,13 +1539,27 @@ async function runPipeline(searchId: string) {
     const serperKeyForDm = (settings?.serper_api_key as string | undefined) || Deno.env.get("SERPER_API_KEY") || null;
     const firecrawlKeyForDm = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY") || null;
     let freeDmFound = 0;
+    let dmSkipped = 0;
     {
       const missing = merged.filter(b => !b.contact_name);
-      const BATCH_DM = 4;
+      // Whole-step budget. The step must finish well inside the edge function's
+      // wall clock; running out of time is expected on large result sets and is
+      // reported rather than left to stall.
+      const DM_STEP_DEADLINE_MS = Date.now() + 90_000;
+      // Each business is a chain of independent network calls, so widening the
+      // batch buys coverage without extra CPU.
+      const BATCH_DM = 8;
+
       for (let i = 0; i < missing.length; i += BATCH_DM) {
+        if (Date.now() > DM_STEP_DEADLINE_MS) { dmSkipped = missing.length - i; break; }
+        // Nothing left to spend means every remaining lookup would no-op.
+        if (!budget.canSpend("firecrawl_search")) { dmSkipped = missing.length - i; break; }
+
         const slice = missing.slice(i, i + BATCH_DM);
         await Promise.allSettled(slice.map(async (b) => {
-          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
+          const dm = await serperFreeDmHunt(
+            b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget, DM_STEP_DEADLINE_MS,
+          );
           if (dm) {
             b.contact_name = dm.name;
             b.contact_title = dm.title;
@@ -1532,12 +1569,20 @@ async function runPipeline(searchId: string) {
             dmCount++;
           }
         }));
+
+        // Keep the live progress bar moving through a long sweep, so the step
+        // doesn't look hung while it is genuinely working.
+        const done = Math.min(i + BATCH_DM, missing.length);
+        await setStepRunning(
+          searchId, teamId, "decisionmakers",
+          `Researching owners — ${done} of ${missing.length}`,
+        );
       }
     }
     await SUPABASE.from("searches").update({ decision_makers_found: dmCount }).eq("id", searchId);
-    await setStepDone(searchId, teamId, "decisionmakers", { count: dmCount, free_dm_found: freeDmFound }, ["filter", ...(freeDmFound > 0 ? ["serper_free"] : [])], []);
+    await setStepDone(searchId, teamId, "decisionmakers", { count: dmCount, free_dm_found: freeDmFound, skipped: dmSkipped }, ["filter"], []);
     await logActivity(searchId, teamId, "decisionmakers", "success", "👤",
-      `Identified ${dmCount} decision-makers${freeDmFound > 0 ? ` (${freeDmFound} via free LinkedIn/BiggerPockets/FB hunt)` : ""}`,
+      `Identified ${dmCount} decision-makers${dmSkipped > 0 ? ` · ${dmSkipped} not researched (time or budget limit)` : ""}`,
       { count: dmCount, percent: 40 });
 
     // ── STEP 3: social profile discovery (best-effort) ───────────────────
@@ -1577,9 +1622,9 @@ async function runPipeline(searchId: string) {
 
     // ── STEP 4: FREE skip-trace (Serper web search + Firecrawl scraping + Hunter) ──
     if (await checkCancelled()) return;
-    await setStepRunning(searchId, teamId, "skiptrace", "Free web search + company site scraping + Hunter");
+    await setStepRunning(searchId, teamId, "skiptrace", "Finding phone numbers and emails");
     await logActivity(searchId, teamId, "skiptrace", "running", "🔎",
-      "Searching the open internet for contact info (Google search + website scraping + Hunter)…", { percent: 60 });
+      "Searching the open web for direct contact details…", { percent: 60 });
     const stOk: string[] = [];
     const stFail: string[] = [];
 

@@ -209,6 +209,103 @@ export type Database = {
           },
         ]
       }
+      ai_call_sessions: {
+        Row: {
+          agent_id: string | null
+          block_reason: string | null
+          called_party_timezone: string | null
+          consent_basis: string | null
+          contact_id: string | null
+          cost_usd: number
+          created_at: string
+          disclosure_spoken_at: string | null
+          disclosure_text: string | null
+          dnc_checked_at: string | null
+          duration_seconds: number
+          ended_at: string | null
+          from_number: string
+          id: string
+          local_call_time: string | null
+          outcome: string | null
+          provider_call_sid: string | null
+          started_by: string | null
+          status: string
+          team_id: string
+          to_number: string
+          transcript: Json
+        }
+        Insert: {
+          agent_id?: string | null
+          block_reason?: string | null
+          called_party_timezone?: string | null
+          consent_basis?: string | null
+          contact_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          disclosure_spoken_at?: string | null
+          disclosure_text?: string | null
+          dnc_checked_at?: string | null
+          duration_seconds?: number
+          ended_at?: string | null
+          from_number: string
+          id?: string
+          local_call_time?: string | null
+          outcome?: string | null
+          provider_call_sid?: string | null
+          started_by?: string | null
+          status?: string
+          team_id: string
+          to_number: string
+          transcript?: Json
+        }
+        Update: {
+          agent_id?: string | null
+          block_reason?: string | null
+          called_party_timezone?: string | null
+          consent_basis?: string | null
+          contact_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          disclosure_spoken_at?: string | null
+          disclosure_text?: string | null
+          dnc_checked_at?: string | null
+          duration_seconds?: number
+          ended_at?: string | null
+          from_number?: string
+          id?: string
+          local_call_time?: string | null
+          outcome?: string | null
+          provider_call_sid?: string | null
+          started_by?: string | null
+          status?: string
+          team_id?: string
+          to_number?: string
+          transcript?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_call_sessions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "voice_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_call_sessions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_call_sessions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -443,6 +540,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "analytics_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_cost_events: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          error: string | null
+          id: string
+          ok: boolean
+          operation: string
+          provider: string
+          search_id: string | null
+          search_kind: string | null
+          team_id: string
+          unit_cost_usd: number
+          units: number
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          operation: string
+          provider: string
+          search_id?: string | null
+          search_kind?: string | null
+          team_id: string
+          unit_cost_usd?: number
+          units?: number
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          operation?: string
+          provider?: string
+          search_id?: string | null
+          search_kind?: string | null
+          team_id?: string
+          unit_cost_usd?: number
+          units?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_cost_events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -1617,6 +1767,80 @@ export type Database = {
           },
         ]
       }
+      content_templates: {
+        Row: {
+          body_html: string | null
+          body_text: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          industry: string | null
+          is_active: boolean
+          kind: string
+          name: string
+          platform: string | null
+          subject: string | null
+          tags: string[]
+          team_id: string
+          times_converted: number
+          times_responded: number
+          times_used: number
+          updated_at: string
+          variables: string[]
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean
+          kind: string
+          name: string
+          platform?: string | null
+          subject?: string | null
+          tags?: string[]
+          team_id: string
+          times_converted?: number
+          times_responded?: number
+          times_used?: number
+          updated_at?: string
+          variables?: string[]
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean
+          kind?: string
+          name?: string
+          platform?: string | null
+          subject?: string | null
+          tags?: string[]
+          team_id?: string
+          times_converted?: number
+          times_responded?: number
+          times_used?: number
+          updated_at?: string
+          variables?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_templates_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       csv_import_jobs: {
         Row: {
           completed_at: string | null
@@ -2691,6 +2915,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_rate_card: {
+        Row: {
+          cost_usd: number
+          credits_charged: number
+          id: string
+          label: string
+          notes: string | null
+          unit_key: string
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          cost_usd?: number
+          credits_charged?: number
+          id?: string
+          label: string
+          notes?: string | null
+          unit_key: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          cost_usd?: number
+          credits_charged?: number
+          id?: string
+          label?: string
+          notes?: string | null
+          unit_key?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3446,6 +3703,83 @@ export type Database = {
           },
         ]
       }
+      social_connections: {
+        Row: {
+          access_token_ciphertext: string
+          created_at: string
+          display_name: string | null
+          expires_at: string | null
+          external_id: string | null
+          id: string
+          platform: string
+          refresh_token_ciphertext: string | null
+          scopes: string[]
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_ciphertext: string
+          created_at?: string
+          display_name?: string | null
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          platform: string
+          refresh_token_ciphertext?: string | null
+          scopes?: string[]
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_ciphertext?: string
+          created_at?: string
+          display_name?: string | null
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          platform?: string
+          refresh_token_ciphertext?: string | null
+          scopes?: string[]
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_connections_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_oauth_states: {
+        Row: {
+          created_at: string
+          platform: string
+          redirect_to: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          platform: string
+          redirect_to?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          platform?: string
+          redirect_to?: string | null
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subdomain_requests: {
         Row: {
           created_at: string
@@ -3710,6 +4044,62 @@ export type Database = {
           },
         ]
       }
+      team_entitlements: {
+        Row: {
+          ai_caller: boolean
+          daily_email_limit: number
+          daily_sms_limit: number
+          dialer: boolean
+          discovery: boolean
+          email_campaigns: boolean
+          monthly_ai_call_minutes: number
+          overage_allowed: boolean
+          sms: boolean
+          social_dm: boolean
+          team_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ai_caller?: boolean
+          daily_email_limit?: number
+          daily_sms_limit?: number
+          dialer?: boolean
+          discovery?: boolean
+          email_campaigns?: boolean
+          monthly_ai_call_minutes?: number
+          overage_allowed?: boolean
+          sms?: boolean
+          social_dm?: boolean
+          team_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ai_caller?: boolean
+          daily_email_limit?: number
+          daily_sms_limit?: number
+          dialer?: boolean
+          discovery?: boolean
+          email_campaigns?: boolean
+          monthly_ai_call_minutes?: number
+          overage_allowed?: boolean
+          sms?: boolean
+          social_dm?: boolean
+          team_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_entitlements_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_invites: {
         Row: {
           accepted_at: string | null
@@ -3756,6 +4146,10 @@ export type Database = {
           account_timezone: string
           ai_ark_endpoint: string | null
           ai_ark_key: string | null
+          ai_call_disclosure: string
+          ai_call_window_end_hour: number
+          ai_call_window_start_hour: number
+          ai_calls_enabled: boolean
           ai_features_enabled: Json
           ai_generations_reset_at: string | null
           ai_generations_this_month: number
@@ -3806,9 +4200,11 @@ export type Database = {
           linkedin_session: string | null
           lusha_api_key: string | null
           make_webhook_url: string | null
+          max_run_cost_usd: number
           meta_fb_page: Json | null
           meta_ig_account: Json | null
           meta_token: string | null
+          millionverifier_api_key: string | null
           mxtoolbox_api_key: string | null
           n8n_webhook_url: string | null
           neverbounce_api_key: string | null
@@ -3871,6 +4267,10 @@ export type Database = {
           account_timezone?: string
           ai_ark_endpoint?: string | null
           ai_ark_key?: string | null
+          ai_call_disclosure?: string
+          ai_call_window_end_hour?: number
+          ai_call_window_start_hour?: number
+          ai_calls_enabled?: boolean
           ai_features_enabled?: Json
           ai_generations_reset_at?: string | null
           ai_generations_this_month?: number
@@ -3921,9 +4321,11 @@ export type Database = {
           linkedin_session?: string | null
           lusha_api_key?: string | null
           make_webhook_url?: string | null
+          max_run_cost_usd?: number
           meta_fb_page?: Json | null
           meta_ig_account?: Json | null
           meta_token?: string | null
+          millionverifier_api_key?: string | null
           mxtoolbox_api_key?: string | null
           n8n_webhook_url?: string | null
           neverbounce_api_key?: string | null
@@ -3986,6 +4388,10 @@ export type Database = {
           account_timezone?: string
           ai_ark_endpoint?: string | null
           ai_ark_key?: string | null
+          ai_call_disclosure?: string
+          ai_call_window_end_hour?: number
+          ai_call_window_start_hour?: number
+          ai_calls_enabled?: boolean
           ai_features_enabled?: Json
           ai_generations_reset_at?: string | null
           ai_generations_this_month?: number
@@ -4036,9 +4442,11 @@ export type Database = {
           linkedin_session?: string | null
           lusha_api_key?: string | null
           make_webhook_url?: string | null
+          max_run_cost_usd?: number
           meta_fb_page?: Json | null
           meta_ig_account?: Json | null
           meta_token?: string | null
+          millionverifier_api_key?: string | null
           mxtoolbox_api_key?: string | null
           n8n_webhook_url?: string | null
           neverbounce_api_key?: string | null
@@ -4109,6 +4517,7 @@ export type Database = {
       }
       teams: {
         Row: {
+          brand_color: string | null
           contact_limit: number
           created_at: string
           credits_period_start: string
@@ -4141,6 +4550,7 @@ export type Database = {
           white_label_secondary_color: string | null
         }
         Insert: {
+          brand_color?: string | null
           contact_limit?: number
           created_at?: string
           credits_period_start?: string
@@ -4173,6 +4583,7 @@ export type Database = {
           white_label_secondary_color?: string | null
         }
         Update: {
+          brand_color?: string | null
           contact_limit?: number
           created_at?: string
           credits_period_start?: string
@@ -4649,6 +5060,7 @@ export type Database = {
           _plan?: Database["public"]["Enums"]["plan_tier"]
         }
         Returns: {
+          brand_color: string | null
           contact_limit: number
           created_at: string
           credits_period_start: string
@@ -4712,6 +5124,10 @@ export type Database = {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
+      is_number_suppressed: {
+        Args: { _phone: string; _team_id: string }
+        Returns: boolean
+      }
       is_parent_admin: {
         Args: { _child_team_id: string; _user_id: string }
         Returns: boolean
@@ -4723,6 +5139,16 @@ export type Database = {
         Returns: boolean
       }
       purge_expired_discovery_contacts: { Args: never; Returns: number }
+      rate_card_margin: {
+        Args: never
+        Returns: {
+          cost_usd: number
+          credits_charged: number
+          label: string
+          unit_key: string
+          vendor: string
+        }[]
+      }
       request_login: {
         Args: { _email: string; _ip?: string; _user_agent?: string }
         Returns: Json
@@ -4732,9 +5158,11 @@ export type Database = {
         Args: { _team_id: string; _total: number }
         Returns: undefined
       }
+      run_cost_usd: { Args: { _search_id: string }; Returns: number }
       switch_team: {
         Args: { _team_id: string }
         Returns: {
+          brand_color: string | null
           contact_limit: number
           created_at: string
           credits_period_start: string
@@ -4776,6 +5204,10 @@ export type Database = {
       team_owner_is_super_admin: {
         Args: { _team_id: string }
         Returns: boolean
+      }
+      template_response_rate: {
+        Args: { _template_id: string }
+        Returns: number
       }
       transfer_foundation_owner: {
         Args: { _new_owner_id: string; _team_id: string }
