@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 import { formatUsDiscoveryLocation } from "@/lib/us-locations";
 import { toast } from "sonner";
-import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban, Search as SearchIcon, UserSearch } from "lucide-react";
+import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban, Search as SearchIcon, UserSearch, Locate } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiscoveryCapBanner } from "@/components/app-shell/discovery-cap-banner";
 import { useAuth } from "@/lib/auth";
