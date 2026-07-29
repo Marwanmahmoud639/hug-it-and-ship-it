@@ -1306,7 +1306,7 @@ async function runPipeline(searchId: string) {
     // ── STEP 1: business discovery (parallel, US-only) ─────────────────────
     await setStepRunning(searchId, teamId, "business", `Scraping ${country} directories`);
     await logActivity(searchId, teamId, "business", "running", "🌎",
-      `Scraping Google Maps, Reddit, Yelp, Yellow Pages, Angi, BBB, BiggerPockets, Craigslist (${country})…`,
+      `Scraping Google Maps, OpenStreetMap, Yelp, Yellow Pages, Reddit (${country})…`,
       { percent: 10 });
 
     const isRealEstate = /cash buyer|wholesale|investor|investment|property|real estate/i.test(keyword);
