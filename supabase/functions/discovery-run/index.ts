@@ -1536,7 +1536,7 @@ async function runPipeline(searchId: string) {
     await SUPABASE.from("searches").update({ decision_makers_found: dmCount }).eq("id", searchId);
     await setStepDone(searchId, teamId, "decisionmakers", { count: dmCount, free_dm_found: freeDmFound }, ["filter", ...(freeDmFound > 0 ? ["serper_free"] : [])], []);
     await logActivity(searchId, teamId, "decisionmakers", "success", "👤",
-      `Identified ${dmCount} decision-makers${freeDmFound > 0 ? ` (${freeDmFound} via free LinkedIn/BiggerPockets/FB hunt)` : ""}`,
+      `Identified ${dmCount} decision-makers${freeDmFound > 0 ? ` (${freeDmFound} via free LinkedIn / Google hunt)` : ""}`,
       { count: dmCount, percent: 40 });
 
     // ── STEP 3: social profile discovery (best-effort) ───────────────────
