@@ -1339,7 +1339,6 @@ async function runPipeline(searchId: string) {
     const firecrawlKey = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY");
     if (firecrawlKey) {
       if (isRealEstate) {
-        tasks.push(wrap("biggerpockets", scrapeBiggerPocketsGlobal(keyword, location, firecrawlKey)));
         tasks.push(wrap("craigslist", scrapeCraigslistGlobal(keyword, location, firecrawlKey)));
       }
       if (isLocalBiz || !isRealEstate) {
