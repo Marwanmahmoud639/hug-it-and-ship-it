@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DISCOVERY_INDUSTRIES } from "@/lib/discovery-industries";
 import { formatUsDiscoveryLocation } from "@/lib/us-locations";
 import { toast } from "sonner";
-import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban, Search as SearchIcon, UserSearch, Locate } from "lucide-react";
+import { Loader2, Check, X, ExternalLink, Zap, Radar, RotateCw, Users, Plus, XCircle, CheckCircle2, TrendingUp, Ban, Search as SearchIcon, UserSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiscoveryCapBanner } from "@/components/app-shell/discovery-cap-banner";
 import { useAuth } from "@/lib/auth";
@@ -82,44 +82,7 @@ function DiscoveryPage() {
   useEffect(() => { if (teamNiches[0] && !industry) setIndustry(teamNiches[0]); }, [teamNicheRaw]);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [detectingLoc, setDetectingLoc] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
-
-  /** AI/geo-based auto-detect: browser geolocation → Nominatim reverse geocode. */
-  const detectLocation = async () => {
-    if (!("geolocation" in navigator)) {
-      toast.error("Geolocation isn't available in this browser");
-      return;
-    }
-    setDetectingLoc(true);
-    try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, enableHighAccuracy: false }),
-      );
-      const { latitude, longitude } = pos.coords;
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
-        { headers: { "Accept-Language": "en-US,en" } },
-      );
-      const j = await res.json();
-      const a = j.address || {};
-      const detectedCity = a.city || a.town || a.village || a.county || "";
-      const st = (a["ISO3166-2-lvl4"] || "").split("-")[1] || "";
-      const zipCode = a.postcode || "";
-      if (a.country_code && a.country_code.toLowerCase() !== "us") {
-        toast.error("Discovery is US-only right now — detected location is outside the US");
-        return;
-      }
-      if (detectedCity) setCity(detectedCity);
-      if (st) setStateCode(st);
-      if (zipCode) setZip(zipCode.slice(0, 10));
-      toast.success(`Detected ${detectedCity || "your area"}${st ? `, ${st}` : ""}`);
-    } catch (e: any) {
-      toast.error(e?.message || "Couldn't detect your location");
-    } finally {
-      setDetectingLoc(false);
-    }
-  };
 
   const mutation = useMutation({
     mutationFn: () => start({
@@ -314,20 +277,7 @@ function DiscoveryPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">United States location</Label>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px]">US only</Badge>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={detectLocation}
-                  disabled={detectingLoc}
-                  className="h-6 px-2 text-[10px] gap-1"
-                >
-                  {detectingLoc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Locate className="w-3 h-3" />}
-                  Auto-detect
-                </Button>
-              </div>
+              <Badge variant="outline" className="text-[10px]">US only</Badge>
             </div>
             <Input
               value={city}
@@ -355,10 +305,9 @@ function DiscoveryPage() {
               />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Tap Auto-detect to fill city, state, and ZIP from your device location. State coverage: all 50 states + DC.
+              State coverage includes all 50 states plus DC; city is free-text so every US city, county, and metro can run.
             </p>
           </div>
-
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Industry</Label>
