@@ -314,7 +314,20 @@ function DiscoveryPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">United States location</Label>
-              <Badge variant="outline" className="text-[10px]">US only</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px]">US only</Badge>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={detectLocation}
+                  disabled={detectingLoc}
+                  className="h-6 px-2 text-[10px] gap-1"
+                >
+                  {detectingLoc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Locate className="w-3 h-3" />}
+                  Auto-detect
+                </Button>
+              </div>
             </div>
             <Input
               value={city}
@@ -342,9 +355,10 @@ function DiscoveryPage() {
               />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              State coverage includes all 50 states plus DC; city is free-text so every US city, county, and metro can run.
+              Tap Auto-detect to fill city, state, and ZIP from your device location. State coverage: all 50 states + DC.
             </p>
           </div>
+
 
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Industry</Label>
