@@ -1521,14 +1521,19 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < missing.length; i += BATCH_DM) {
         const slice = missing.slice(i, i + BATCH_DM);
         await Promise.allSettled(slice.map(async (b) => {
-          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
-          if (dm) {
-            b.contact_name = dm.name;
-            b.contact_title = dm.title;
-            if (dm.linkedin_url) b.linkedin_url ||= dm.linkedin_url;
-            b.sources = Array.from(new Set([...(b.sources || []), `free_dm_${dm.source}`]));
-            freeDmFound++;
-            dmCount++;
+          try {
+            if (!b.name) return;
+            const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
+            if (dm) {
+              b.contact_name = dm.name;
+              b.contact_title = dm.title;
+              if (dm.linkedin_url) b.linkedin_url ||= dm.linkedin_url;
+              b.sources = Array.from(new Set([...(b.sources || []), `free_dm_${dm.source}`]));
+              freeDmFound++;
+              dmCount++;
+            }
+          } catch (e) {
+            console.error("dm hunt failed for", b?.name, e);
           }
         }));
       }
