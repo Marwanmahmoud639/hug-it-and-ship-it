@@ -1306,7 +1306,7 @@ async function runPipeline(searchId: string) {
     // ── STEP 1: business discovery (parallel, US-only) ─────────────────────
     await setStepRunning(searchId, teamId, "business", `Scraping ${country} directories`);
     await logActivity(searchId, teamId, "business", "running", "🌎",
-      `Scraping Google Maps, Reddit, Yelp, Yellow Pages, Angi, BBB, BiggerPockets, Craigslist (${country})…`,
+      `Scraping Google Maps, OpenStreetMap, Yelp, Yellow Pages, Reddit (${country})…`,
       { percent: 10 });
 
     const isRealEstate = /cash buyer|wholesale|investor|investment|property|real estate/i.test(keyword);
@@ -1339,7 +1339,6 @@ async function runPipeline(searchId: string) {
     const firecrawlKey = (settings?.firecrawl_api_key as string | undefined) || Deno.env.get("FIRECRAWL_API_KEY");
     if (firecrawlKey) {
       if (isRealEstate) {
-        tasks.push(wrap("biggerpockets", scrapeBiggerPocketsGlobal(keyword, location, firecrawlKey)));
         tasks.push(wrap("craigslist", scrapeCraigslistGlobal(keyword, location, firecrawlKey)));
       }
       if (isLocalBiz || !isRealEstate) {
@@ -1522,14 +1521,19 @@ async function runPipeline(searchId: string) {
       for (let i = 0; i < missing.length; i += BATCH_DM) {
         const slice = missing.slice(i, i + BATCH_DM);
         await Promise.allSettled(slice.map(async (b) => {
-          const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
-          if (dm) {
-            b.contact_name = dm.name;
-            b.contact_title = dm.title;
-            if (dm.linkedin_url) b.linkedin_url ||= dm.linkedin_url;
-            b.sources = Array.from(new Set([...(b.sources || []), `free_dm_${dm.source}`]));
-            freeDmFound++;
-            dmCount++;
+          try {
+            if (!b.name) return;
+            const dm = await serperFreeDmHunt(b.name, location || null, serperKeyForDm, firecrawlKeyForDm, budget);
+            if (dm) {
+              b.contact_name = dm.name;
+              b.contact_title = dm.title;
+              if (dm.linkedin_url) b.linkedin_url ||= dm.linkedin_url;
+              b.sources = Array.from(new Set([...(b.sources || []), `free_dm_${dm.source}`]));
+              freeDmFound++;
+              dmCount++;
+            }
+          } catch (e) {
+            console.error("dm hunt failed for", b?.name, e);
           }
         }));
       }
@@ -1537,7 +1541,7 @@ async function runPipeline(searchId: string) {
     await SUPABASE.from("searches").update({ decision_makers_found: dmCount }).eq("id", searchId);
     await setStepDone(searchId, teamId, "decisionmakers", { count: dmCount, free_dm_found: freeDmFound }, ["filter", ...(freeDmFound > 0 ? ["serper_free"] : [])], []);
     await logActivity(searchId, teamId, "decisionmakers", "success", "👤",
-      `Identified ${dmCount} decision-makers${freeDmFound > 0 ? ` (${freeDmFound} via free LinkedIn/BiggerPockets/FB hunt)` : ""}`,
+      `Identified ${dmCount} decision-makers${freeDmFound > 0 ? ` (${freeDmFound} via free LinkedIn / Google hunt)` : ""}`,
       { count: dmCount, percent: 40 });
 
     // ── STEP 3: social profile discovery (best-effort) ───────────────────
